@@ -1,0 +1,50 @@
+import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../db/database_helper';
+
+class AuthService {
+  final db = DatabaseHelper.instance;
+  final storage = const FlutterSecureStorage();
+
+  Future<String?> register(String username, String email, String password) async {
+    if (username.isEmpty || email.isEmpty || password.length < 6) {
+      return "Data tidak valid (password min 6 karakter)";
+    }
+
+    final hashed = BCrypt.hashpw(password, BCrypt.gensalt());
+    final now = DateTime.now().toIso8601String();
+
+    try {
+      final database = await db.database;
+      await database.insert('users', {
+        'username': username,
+        'email': email,
+        'password_hash': hashed,
+        'created_at': now,
+      });
+      return null; // null = sukses
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> login(String usernameOrEmail, String password) async {
+    final database = await db.database;
+
+    final result = await database.query(
+      'users',
+      where: 'username = ? OR email = ?',
+      whereArgs: [usernameOrEmail, usernameOrEmail],
+    );
+
+    if (result.isEmpty) return "Akun tidak ditemukan";
+
+    final user = result.first;
+
+    final match = BCrypt.checkpw(password, user['password_hash'] as String);
+    if (!match) return "Password salah";
+
+    await storage.write(key: 'user_id', value: user['id'].toString());
+    return null; // sukses
+  }
+}
