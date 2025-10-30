@@ -5,17 +5,15 @@ part 'user_model.g.dart';
 @HiveType(typeId: 0)
 class UserModel extends HiveObject {
   @HiveField(0)
-  String username;
+  String username; // Akan berfungsi sebagai email/username
 
   @HiveField(1)
-  String password;
+  String password; // Password sudah terenkripsi
 
-  @HiveField(2)
-  String country;
+  // Hapus field 'country'
 
   UserModel({
     required this.username,
     required this.password,
-    required this.country,
   });
 }

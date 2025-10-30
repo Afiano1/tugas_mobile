@@ -12,25 +12,32 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
-  final countryController = TextEditingController();
+  final confirmPasswordController = TextEditingController(); // Input Konfirmasi Password
 
   void _register() async {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
-    final country = countryController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
 
-    if (username.isEmpty || password.isEmpty || country.isEmpty) {
+    if (username.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Semua field harus diisi!')),
       );
       return;
     }
 
-    final success = await AuthService.register(username, password, country);
+    if (password != confirmPassword) { // Validasi Konfirmasi Password
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password dan Konfirmasi Password tidak cocok!')),
+      );
+      return;
+    }
+
+    final success = await AuthService.register(username, password);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrasi berhasil!')),
+        const SnackBar(content: Text('Registrasi berhasil! Silahkan Login.')),
       );
       Navigator.pushReplacement(
         context,
@@ -51,9 +58,9 @@ class _RegisterPageState extends State<RegisterPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(controller: usernameController, decoration: const InputDecoration(labelText: 'Username')),
+            TextField(controller: usernameController, decoration: const InputDecoration(labelText: 'Username / Email')),
             TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
-            TextField(controller: countryController, decoration: const InputDecoration(labelText: 'Country')),
+            TextField(controller: confirmPasswordController, decoration: const InputDecoration(labelText: 'Confirm Password'), obscureText: true),
             const SizedBox(height: 20),
             ElevatedButton(onPressed: _register, child: const Text('Daftar')),
           ],

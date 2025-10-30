@@ -15,8 +15,10 @@ class HiveManager {
     }
 
     // Buka box data pengguna dan session
+    // 'users' akan menyimpan data user (key: username, value: UserModel)
     userBox = await Hive.openBox<UserModel>('users');
-    sessionBox = await Hive.openBox('session');
+    // 'session' akan menyimpan status login (isLoggedIn, currentUser)
+    sessionBox = await Hive.openBox('session'); 
   }
 
   static Future<void> clearAll() async {

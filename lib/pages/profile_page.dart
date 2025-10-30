@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import '../db/hive_manager.dart';
-import '../models/user_model.dart';
 
 class ProfilePage extends StatelessWidget {
-  final String email;
-  const ProfilePage({super.key, required this.email});
+  final String username; 
+  // Catatan: Ini harusnya usernameKey (lowercase) yang disimpan di session
+  const ProfilePage({super.key, required this.username});
 
   @override
   Widget build(BuildContext context) {
-    final data = HiveManager.usersBox.get(email);
-    final user = data != null ? UserModel.fromMap(data) : null;
+    // Mengambil user dari userBox menggunakan username key (lowercase)
+    final user = HiveManager.userBox.get(username); 
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -21,10 +21,8 @@ class ProfilePage extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          Text('Name: ${user?.name ?? '-'}'),
-          Text('Email: ${user?.email ?? '-'}'),
-          Text('Country: ${user?.country ?? '-'}'),
-          Text('Created: ${user?.createdAt ?? '-'}'),
+          Text('Username: ${user?.username ?? '-'}'),
+          // Hapus Country
         ],
       ),
     );

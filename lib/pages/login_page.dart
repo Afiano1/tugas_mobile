@@ -18,15 +18,23 @@ class _LoginPageState extends State<LoginPage> {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
 
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username dan Password harus diisi')),
+      );
+      return;
+    }
+
     final user = await AuthService.login(username, password);
     if (user != null) {
+      // Login berhasil, navigasi ke Home
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomePage(user: user)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email atau password salah')),
+        const SnackBar(content: Text('Username atau password salah')),
       );
     }
   }
