@@ -35,7 +35,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Hive Login Demo',
       theme: ThemeData(primarySwatch: Colors.deepPurple),
-      home: initialPage, // Menampilkan halaman awal yang sudah dicek session-nya
+      home:
+          initialPage, // Menampilkan halaman awal yang sudah dicek session-nya
     );
   }
 }
