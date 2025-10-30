@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'home_page.dart';
+import '../screen/main_screen.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -30,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
       // Login berhasil, navigasi ke Home
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage(user: user)),
+        MaterialPageRoute(builder: (_) => MainScreen(user: user)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
