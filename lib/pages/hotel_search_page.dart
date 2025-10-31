@@ -16,37 +16,59 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
   bool _isLoading = false;
   String _errorMessage = '';
 
-  Future<void> _fetchHotels(String query) async {
-    if (query.isEmpty) return;
+  @override
+  void initState() {
+    super.initState();
+    _fetchHotels("Indonesia"); // tampilkan default
+  }
 
+  Future<void> _fetchHotels(String query) async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
+    final checkIn = DateTime.now().add(const Duration(days: 1));
+    final checkOut = DateTime.now().add(const Duration(days: 2));
+    final checkInStr =
+        "${checkIn.year}-${checkIn.month.toString().padLeft(2, '0')}-${checkIn.day.toString().padLeft(2, '0')}";
+    final checkOutStr =
+        "${checkOut.year}-${checkOut.month.toString().padLeft(2, '0')}-${checkOut.day.toString().padLeft(2, '0')}";
+
     final url = Uri.parse(
-      'https://serpapi.com/search?engine=google_hotels&q=$query&api_key=20949c48851c8330357e4897bd7c08811ef4d73cd41b1b9768ff71cf5f05a807',
+      'https://serpapi.com/search.json'
+      '?engine=google_hotels'
+      '&q=${Uri.encodeComponent(query + " resorts")}'
+      '&check_in_date=$checkInStr'
+      '&check_out_date=$checkOutStr'
+      '&adults=2'
+      '&currency=USD'
+      '&gl=us'
+      '&hl=en'
+      '&api_key=20949c48851c8330357e4897bd7c08811ef4d73cd41b1b9768ff71cf5f05a807',
     );
 
     try {
-      print('Fetching from: $url'); // Debugging
       final response = await http.get(url);
+      print('📡 URL: $url');
+      print('📦 BODY: ${response.body.substring(0, 500)}...'); // limit print
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic>? results = data['search_results'];
+        final results = (data['properties'] ??
+            data['search_results']) as List<dynamic>?;
 
         if (results == null || results.isEmpty) {
           setState(() => _errorMessage = 'Tidak ada hotel ditemukan.');
         } else {
-          // ✅ Gunakan factory constructor dari HotelModel
           setState(() {
-            _hotels = results.map((item) => HotelModel.fromJson(item)).toList();
+            _hotels =
+                results.map((item) => HotelModel.fromJson(item)).toList();
           });
         }
       } else {
         setState(() => _errorMessage =
-            'Gagal memuat hotel. Status code: ${response.statusCode}');
+            'Gagal memuat hotel. Code: ${response.statusCode}');
       }
     } catch (e) {
       setState(() => _errorMessage = 'Terjadi kesalahan: $e');
@@ -66,18 +88,29 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Cari Hotel (misal: "Yogyakarta")',
+                hintText: 'Cari Hotel (misal: "Bali" atau "Jakarta")',
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
-                  onPressed: () => _fetchHotels(_searchController.text),
+                  onPressed: () {
+                    final query = _searchController.text.trim();
+                    _fetchHotels(query.isEmpty ? "Indonesia" : query);
+                  },
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             if (_isLoading)
-              const CircularProgressIndicator()
+              const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_errorMessage.isNotEmpty)
-              Text(_errorMessage, style: const TextStyle(color: Colors.red))
+              Expanded(
+                  child: Center(
+                      child: Text(
+                _errorMessage,
+                style: const TextStyle(color: Colors.red),
+              )))
+            else if (_hotels.isEmpty)
+              const Expanded(
+                  child: Center(child: Text("Belum ada data hotel.")))
             else
               Expanded(
                 child: ListView.builder(
@@ -85,23 +118,23 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
                   itemBuilder: (context, index) {
                     final hotel = _hotels[index];
                     return Card(
-                      elevation: 3,
                       margin: const EdgeInsets.symmetric(vertical: 8),
+                      elevation: 3,
                       child: ListTile(
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
                             hotel.imageUrl,
                             width: 80,
+                            height: 80,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
                                 const Icon(Icons.broken_image, size: 50),
                           ),
                         ),
-                        title: Text(
-                          hotel.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                        title: Text(hotel.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
