@@ -4,8 +4,9 @@ import '../models/hotel_model.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../main.dart'; // Import global plugin notifikasi
+import '../models/booking_model.dart';
+import '../db/hive_manager.dart';
 
 class HotelDetailPage extends StatefulWidget {
   final HotelModel hotel;
@@ -111,17 +112,20 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(hotel.name,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              hotel.name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Text('Alamat: ${hotel.address}'),
             Text('⭐ Rating: ${hotel.rating}'),
             Text('Harga (USD): ${hotel.priceText}'),
             const Divider(height: 32),
 
-            const Text('💰 Konversi Mata Uang:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              '💰 Konversi Mata Uang:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             DropdownButton<String>(
               value: _selectedCurrency,
               items: _currencyRates.keys
@@ -129,59 +133,79 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                   .toList(),
               onChanged: (val) => setState(() => _selectedCurrency = val!),
             ),
-            Text(formattedPrice,
-                style: const TextStyle(
-                    color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              formattedPrice,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const Divider(height: 32),
 
-            const Text('📅 Pilih Tanggal Pemesanan:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              '📅 Pilih Tanggal Pemesanan:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             Row(
               children: [
                 ElevatedButton.icon(
                   onPressed: _selectCheckInDate,
                   icon: const Icon(Icons.login),
-                  label: Text(_checkInDate != null
-                      ? DateFormat('yyyy-MM-dd').format(_checkInDate!)
-                      : 'Pilih Check-in'),
+                  label: Text(
+                    _checkInDate != null
+                        ? DateFormat('yyyy-MM-dd').format(_checkInDate!)
+                        : 'Pilih Check-in',
+                  ),
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton.icon(
                   onPressed: _selectCheckOutDate,
                   icon: const Icon(Icons.logout),
-                  label: Text(_checkOutDate != null
-                      ? DateFormat('yyyy-MM-dd').format(_checkOutDate!)
-                      : 'Pilih Check-out'),
+                  label: Text(
+                    _checkOutDate != null
+                        ? DateFormat('yyyy-MM-dd').format(_checkOutDate!)
+                        : 'Pilih Check-out',
+                  ),
                 ),
               ],
             ),
             const Divider(height: 32),
 
-            const Text('⏰ Pilih Jam Check-in:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              '⏰ Pilih Jam Check-in:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             ElevatedButton.icon(
               onPressed: _selectCheckInTime,
               icon: const Icon(Icons.access_time),
-              label: Text(_checkInTime != null
-                  ? _checkInTime!.format(context)
-                  : 'Pilih Jam'),
+              label: Text(
+                _checkInTime != null
+                    ? _checkInTime!.format(context)
+                    : 'Pilih Jam',
+              ),
             ),
             const Divider(height: 32),
 
-            const Text('🌍 Konversi Waktu:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              '🌍 Konversi Waktu:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             if (_checkInDate != null && _checkInTime != null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      '🕓 WIB (Jakarta): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Jakarta")}'),
+                    '🕓 WIB (Jakarta): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Jakarta")}',
+                  ),
                   Text(
-                      '🕓 WITA (Makassar): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Makassar")}'),
+                    '🕓 WITA (Makassar): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Makassar")}',
+                  ),
                   Text(
-                      '🕓 WIT (Jayapura): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Jayapura")}'),
+                    '🕓 WIT (Jayapura): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Jayapura")}',
+                  ),
                   Text(
-                      '🕓 London: ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Europe/London")}'),
+                    '🕓 London: ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Europe/London")}',
+                  ),
                 ],
               )
             else
@@ -193,23 +217,29 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
 
             Center(
               child: ElevatedButton.icon(
-                onPressed: _checkInDate != null &&
+                onPressed:
+                    _checkInDate != null &&
                         _checkOutDate != null &&
                         _checkInTime != null
                     ? () async {
-                        final bookingData = {
-                          'hotel_name': hotel.name,
-                          'rating': hotel.rating,
-                          'check_in': _checkInDate!.toIso8601String(),
-                          'check_out': _checkOutDate!.toIso8601String(),
-                          'check_in_time': _checkInTime!.format(context),
-                        };
+                        // 🔹 1. Buat instance BookingModel
+                        final booking = BookingModel(
+                          hotelName: hotel.name,
+                          platform: 'SerpAPI',
+                          checkInDate: DateFormat(
+                            'yyyy-MM-dd',
+                          ).format(_checkInDate!),
+                          finalPrice: hotel.priceText,
+                          bookingTime: DateFormat(
+                            'yyyy-MM-dd HH:mm',
+                          ).format(DateTime.now()),
+                        );
 
-                        // 💾 Simpan ke Hive
-                        final box = await Hive.openBox('booking_history');
-                        await box.add(bookingData);
+                        // 🔹 2. Simpan ke Hive melalui HiveManager
+                        final box = HiveManager.bookingBox;
+                        await box.add(booking);
 
-                        // 🔔 Tampilkan notifikasi
+                        // 🔹 3. Kirim notifikasi yang tampil di tray (background)
                         const androidDetails = AndroidNotificationDetails(
                           'booking_channel',
                           'Booking Notifications',
@@ -218,25 +248,24 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                           priority: Priority.high,
                           playSound: true,
                         );
-                        const details =
-                            NotificationDetails(android: androidDetails);
-
+                        const notifDetails = NotificationDetails(
+                          android: androidDetails,
+                        );
                         await flutterLocalNotificationsPlugin.show(
                           0,
                           'Pemesanan Berhasil!',
-                          'Booking hotel ${hotel.name} telah dilakukan.',
-                          details,
+                          'Hotel ${hotel.name} telah dipesan.',
+                          notifDetails,
                         );
 
+                        // 🔹 4. Kembali ke halaman utama + tampilkan snackbar
                         if (context.mounted) {
-                          Navigator.of(context)
-                              .pushReplacementNamed('/hotel_search');
-
-                          // ✅ Tambahkan snackbar biar user tahu data tersimpan
+                          Navigator.of(
+                            context,
+                          ).pushReplacementNamed('/hotel_search');
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Pemesanan berhasil disimpan!'),
-                              duration: Duration(seconds: 2),
                             ),
                           );
                         }
@@ -247,10 +276,13 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
               ),
             ),
