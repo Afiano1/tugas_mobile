@@ -1,7 +1,7 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import '../models/hotel_model.dart';
-import '../services/hotel_api_service.dart';
-import 'hotel_detail_page.dart'; // Halaman baru yang akan kita buat
 
 class HotelSearchPage extends StatefulWidget {
   const HotelSearchPage({super.key});
@@ -12,14 +12,46 @@ class HotelSearchPage extends StatefulWidget {
 
 class _HotelSearchPageState extends State<HotelSearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  Future<List<HotelModel>>? _searchResultFuture;
+  List<HotelModel> _hotels = [];
+  bool _isLoading = false;
+  String _errorMessage = '';
 
-  // Fungsi untuk memulai pencarian API
-  void _performSearch(String query) {
-    if (query.isNotEmpty) {
-      setState(() {
-        _searchResultFuture = HotelApiService.searchHotels(query);
-      });
+  Future<void> _fetchHotels(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    final url = Uri.parse(
+      'https://serpapi.com/search?engine=google_hotels&q=$query&api_key=20949c48851c8330357e4897bd7c08811ef4d73cd41b1b9768ff71cf5f05a807',
+    );
+
+    try {
+      print('Fetching from: $url'); // Debugging
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic>? results = data['search_results'];
+
+        if (results == null || results.isEmpty) {
+          setState(() => _errorMessage = 'Tidak ada hotel ditemukan.');
+        } else {
+          // ✅ Gunakan factory constructor dari HotelModel
+          setState(() {
+            _hotels = results.map((item) => HotelModel.fromJson(item)).toList();
+          });
+        }
+      } else {
+        setState(() => _errorMessage =
+            'Gagal memuat hotel. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Terjadi kesalahan: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -27,113 +59,77 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Cari Hotel (SerpAPI)')),
-      body: Column(
-        children: [
-          // 1. Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Cari Hotel (misal: "Yogyakarta")',
+                hintText: 'Cari Hotel (misal: "Yogyakarta")',
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
-                  onPressed: () => _performSearch(_searchController.text),
+                  onPressed: () => _fetchHotels(_searchController.text),
                 ),
-                border: const OutlineInputBorder(),
               ),
-              onSubmitted: _performSearch,
             ),
-          ),
-          
-          // 2. Hasil Pencarian (Daftar Hotel)
-          Expanded(
-            child: FutureBuilder<List<HotelModel>>(
-              future: _searchResultFuture,
-              builder: (context, snapshot) {
-                // Saat sedang loading
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                
-                // Jika ada error
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                
-                // Jika data berhasil dimuat tapi kosong
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Tidak ada hotel ditemukan. Silakan cari.'));
-                }
-                
-                // Tampilkan daftar hotel
-                final hotels = snapshot.data!;
-                return ListView.builder(
-                  itemCount: hotels.length,
+            const SizedBox(height: 20),
+            if (_isLoading)
+              const CircularProgressIndicator()
+            else if (_errorMessage.isNotEmpty)
+              Text(_errorMessage, style: const TextStyle(color: Colors.red))
+            else
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _hotels.length,
                   itemBuilder: (context, index) {
-                    final hotel = hotels[index];
-                    return _buildHotelCard(context, hotel);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget untuk satu kartu hotel
-  Widget _buildHotelCard(BuildContext context, HotelModel hotel) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 4,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          // Navigasi ke Halaman Detail
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HotelDetailPage(hotel: hotel),
-            ),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.network(
-              hotel.imageUrl,
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => 
-                  Container(height: 180, color: Colors.grey[200], child: Icon(Icons.broken_image)),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(hotel.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(hotel.address, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[600])),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(hotel.price, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
-                      Row(
-                        children: [
-                          Icon(Icons.star, color: Colors.amber, size: 20),
-                          Text(hotel.rating.toString()),
-                        ],
+                    final hotel = _hotels[index];
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            hotel.imageUrl,
+                            width: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.broken_image, size: 50),
+                          ),
+                        ),
+                        title: Text(
+                          hotel.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(hotel.address),
+                            Text(
+                              '⭐ ${hotel.rating.toString()}',
+                              style: const TextStyle(color: Colors.orange),
+                            ),
+                            Text(
+                              hotel.price,
+                              style: const TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/hotel_detail',
+                            arguments: hotel,
+                          );
+                        },
                       ),
-                    ],
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
-            ),
           ],
         ),
       ),

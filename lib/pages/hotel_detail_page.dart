@@ -48,7 +48,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
         _priceSymbol = 'IDR (Fallback)';
       }
     } else {
-        _numericPriceIDDR = 5000000; // Fallback
+        _numericPriceIDR = 5000000;
         _priceSymbol = 'IDR (Fallback)';
     }
   }

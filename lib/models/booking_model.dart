@@ -1,5 +1,4 @@
 import 'package:hive/hive.dart';
-import 'hotel_model.dart'; // Import Model Hotel
 
 part 'booking_model.g.dart';
 
