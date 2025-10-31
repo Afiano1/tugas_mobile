@@ -4,9 +4,8 @@ import '../models/hotel_model.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:hive/hive.dart';
-import '../main.dart'; // 🔔 Import global notifikasi plugin
-import 'hotel_search_page.dart'; // ✅ untuk navigasi aman
+import 'package:hive_flutter/hive_flutter.dart';
+import '../main.dart'; // Import global plugin notifikasi
 
 class HotelDetailPage extends StatefulWidget {
   final HotelModel hotel;
@@ -121,7 +120,6 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             Text('Harga (USD): ${hotel.priceText}'),
             const Divider(height: 32),
 
-            // === KONVERSI MATA UANG ===
             const Text('💰 Konversi Mata Uang:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButton<String>(
@@ -136,7 +134,6 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                     color: Colors.green, fontWeight: FontWeight.bold)),
             const Divider(height: 32),
 
-            // === PILIH TANGGAL PEMESANAN ===
             const Text('📅 Pilih Tanggal Pemesanan:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             Row(
@@ -160,7 +157,6 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             ),
             const Divider(height: 32),
 
-            // === JAM CHECK-IN ===
             const Text('⏰ Pilih Jam Check-in:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             ElevatedButton.icon(
@@ -172,7 +168,6 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             ),
             const Divider(height: 32),
 
-            // === KONVERSI WAKTU ===
             const Text('🌍 Konversi Waktu:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             if (_checkInDate != null && _checkInTime != null)
@@ -196,7 +191,6 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               ),
             const SizedBox(height: 24),
 
-            // === TOMBOL PESAN ===
             Center(
               child: ElevatedButton.icon(
                 onPressed: _checkInDate != null &&
@@ -211,17 +205,18 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                           'check_in_time': _checkInTime!.format(context),
                         };
 
-                        // 💾 Simpan ke Hive sebelum navigasi
+                        // 💾 Simpan ke Hive
                         final box = await Hive.openBox('booking_history');
                         await box.add(bookingData);
 
-                        // 🔔 Tampilkan notifikasi sebelum navigasi
+                        // 🔔 Tampilkan notifikasi
                         const androidDetails = AndroidNotificationDetails(
                           'booking_channel',
                           'Booking Notifications',
                           channelDescription: 'Notifikasi pemesanan hotel',
-                          importance: Importance.high,
+                          importance: Importance.max,
                           priority: Priority.high,
+                          playSound: true,
                         );
                         const details =
                             NotificationDetails(android: androidDetails);
@@ -229,17 +224,20 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                         await flutterLocalNotificationsPlugin.show(
                           0,
                           'Pemesanan Berhasil!',
-                          'Booking hotel ${hotel.name} telah dilakukan',
+                          'Booking hotel ${hotel.name} telah dilakukan.',
                           details,
                         );
 
-                        // ✅ Setelah notifikasi tampil, navigasi aman tanpa black screen
                         if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const HotelSearchPage()), // kembali ke cari hotel
+                          Navigator.of(context)
+                              .pushReplacementNamed('/hotel_search');
+
+                          // ✅ Tambahkan snackbar biar user tahu data tersimpan
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Pemesanan berhasil disimpan!'),
+                              duration: Duration(seconds: 2),
+                            ),
                           );
                         }
                       }
@@ -249,8 +247,8 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
                 ),
