@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 import '../models/hotel_model.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hive/hive.dart';
+import '../main.dart'; // 🔔 Import global notifikasi plugin
+import 'hotel_search_page.dart'; // ✅ untuk navigasi aman
 
 class HotelDetailPage extends StatefulWidget {
   final HotelModel hotel;
@@ -45,17 +49,14 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     }
   }
 
-  // Menggabungkan tanggal dan jam check-in
   DateTime _combineDateTime(DateTime date, TimeOfDay time) {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
-  // Fungsi konversi zona waktu otomatis
   String _convertTimeZone(DateTime dateTime, String locationName) {
     final location = tz.getLocation(locationName);
     final tzTime = tz.TZDateTime.from(dateTime, location);
-    final formatted = DateFormat('yyyy-MM-dd HH:mm').format(tzTime);
-    return formatted;
+    return DateFormat('yyyy-MM-dd HH:mm').format(tzTime);
   }
 
   Future<void> _selectCheckInDate() async {
@@ -111,10 +112,9 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              hotel.name,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            Text(hotel.name,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text('Alamat: ${hotel.address}'),
             Text('⭐ Rating: ${hotel.rating}'),
@@ -139,7 +139,6 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             // === PILIH TANGGAL PEMESANAN ===
             const Text('📅 Pilih Tanggal Pemesanan:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
             Row(
               children: [
                 ElevatedButton.icon(
@@ -164,7 +163,6 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             // === JAM CHECK-IN ===
             const Text('⏰ Pilih Jam Check-in:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: _selectCheckInTime,
               icon: const Icon(Icons.access_time),
@@ -172,16 +170,15 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                   ? _checkInTime!.format(context)
                   : 'Pilih Jam'),
             ),
-            const SizedBox(height: 16),
+            const Divider(height: 32),
 
-            // === KONVERSI ZONA WAKTU OTOMATIS ===
+            // === KONVERSI WAKTU ===
             const Text('🌍 Konversi Waktu:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             if (_checkInDate != null && _checkInTime != null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 4),
                   Text(
                       '🕓 WIB (Jakarta): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Jakarta")}'),
                   Text(
@@ -202,13 +199,61 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             // === TOMBOL PESAN ===
             Center(
               child: ElevatedButton.icon(
-                onPressed: (_checkInDate != null &&
+                onPressed: _checkInDate != null &&
                         _checkOutDate != null &&
-                        _checkInTime != null)
-                    ? () {}
+                        _checkInTime != null
+                    ? () async {
+                        final bookingData = {
+                          'hotel_name': hotel.name,
+                          'rating': hotel.rating,
+                          'check_in': _checkInDate!.toIso8601String(),
+                          'check_out': _checkOutDate!.toIso8601String(),
+                          'check_in_time': _checkInTime!.format(context),
+                        };
+
+                        // 💾 Simpan ke Hive sebelum navigasi
+                        final box = await Hive.openBox('booking_history');
+                        await box.add(bookingData);
+
+                        // 🔔 Tampilkan notifikasi sebelum navigasi
+                        const androidDetails = AndroidNotificationDetails(
+                          'booking_channel',
+                          'Booking Notifications',
+                          channelDescription: 'Notifikasi pemesanan hotel',
+                          importance: Importance.high,
+                          priority: Priority.high,
+                        );
+                        const details =
+                            NotificationDetails(android: androidDetails);
+
+                        await flutterLocalNotificationsPlugin.show(
+                          0,
+                          'Pemesanan Berhasil!',
+                          'Booking hotel ${hotel.name} telah dilakukan',
+                          details,
+                        );
+
+                        // ✅ Setelah notifikasi tampil, navigasi aman tanpa black screen
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const HotelSearchPage()), // kembali ke cari hotel
+                          );
+                        }
+                      }
                     : null,
-                icon: const Icon(Icons.shopping_bag_outlined),
+                icon: const Icon(Icons.check_circle_outline),
                 label: const Text('Pesan Sekarang'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                ),
               ),
             ),
           ],

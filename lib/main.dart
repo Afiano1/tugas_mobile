@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
-import 'db/hive_manager.dart';
-import 'pages/login_page.dart';
-import 'services/auth_service.dart';
-import 'models/user_model.dart';
-// FIX 3. Import MainScreen
-import 'screen/main_screen.dart';
-// FIX 1. Import Timezone
 import 'package:timezone/data/latest.dart' as tz;
-// FIX 2a. Import Notifikasi
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-// ✅ Import halaman detail hotel
-import 'pages/hotel_detail_page.dart';
-import 'models/hotel_model.dart';
+import 'db/hive_manager.dart';
+import 'models/user_model.dart';
+import 'services/auth_service.dart';
+import 'pages/login_page.dart';
+import 'pages/hotel_search_page.dart';
+import 'screen/main_screen.dart';
 
-// FIX 2b. Deklarasi Global Plugin Notifikasi
+// 🔔 Global plugin notifikasi
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-// Fungsi untuk menentukan halaman awal (Session Check)
+// Cek sesi login
 Future<Widget> _getInitialPage() async {
   final UserModel? user = AuthService.getCurrentUser();
   if (user != null) {
@@ -30,12 +26,13 @@ Future<Widget> _getInitialPage() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   await HiveManager.init();
 
-  // PENTING: Inisialisasi timezone
-  tz.initializeTimeZones(); // FIX: Sekarang 'tz' dikenali
+  // Inisialisasi timezone
+  tz.initializeTimeZones();
 
-  // PENTING: Inisialisasi Notifikasi Lokal
+  // Inisialisasi notifikasi
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const DarwinInitializationSettings initializationSettingsDarwin =
@@ -45,7 +42,7 @@ void main() async {
     android: initializationSettingsAndroid,
     iOS: initializationSettingsDarwin,
   );
-  // FIX: Menggunakan initializationSettings yang sudah didefinisikan
+
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   final initialPage = await _getInitialPage();
@@ -65,13 +62,8 @@ class MyApp extends StatelessWidget {
       title: 'Hive Login Demo',
       theme: ThemeData(primarySwatch: Colors.deepPurple),
       home: initialPage,
-
-      // ✅ Tambahkan route untuk halaman detail hotel
       routes: {
-        '/hotel_detail': (context) {
-          final hotel = ModalRoute.of(context)!.settings.arguments as HotelModel;
-          return HotelDetailPage(hotel: hotel);
-        },
+        '/hotel_search': (context) => const HotelSearchPage(), // ✅ route ditambah
       },
     );
   }
