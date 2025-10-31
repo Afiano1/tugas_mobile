@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../main.dart'; // Menggunakan instance global flutterLocalNotificationsPlugin
+import '../models/hotel_model.dart';
+import '../services/hotel_api_service.dart';
+import 'hotel_detail_page.dart'; // Halaman baru yang akan kita buat
 
 class HotelSearchPage extends StatefulWidget {
   const HotelSearchPage({super.key});
@@ -12,84 +11,14 @@ class HotelSearchPage extends StatefulWidget {
 }
 
 class _HotelSearchPageState extends State<HotelSearchPage> {
-  DateTime? _checkInDate;
-  // Contoh harga dasar dalam IDR
-  final double _priceInIDR = 5000000; 
-  // Kurs asumsi (Anda bisa menggunakan API real-time jika mau)
-  final Map<String, double> _currencyRates = {
-    'USD': 15500.0, // 1 USD = 15500 IDR
-    'EUR': 16700.0, // 1 EUR = 16700 IDR
-    'JPY': 105.0,   // 1 JPY = 105 IDR
-    'AUD': 9800.0,  // Tambahan
-  };
+  final TextEditingController _searchController = TextEditingController();
+  Future<List<HotelModel>>? _searchResultFuture;
 
-  // --- Fungsi Konversi Mata Uang ---
-  String _convertCurrency(double amountIDR, String targetCurrencyCode, double rate) {
-    if (rate == 0) return 'N/A';
-    final amount = amountIDR / rate;
-    // Menggunakan NumberFormat untuk format yang rapi
-    final format = NumberFormat.currency(locale: 'en_US', symbol: targetCurrencyCode);
-    return format.format(amount);
-  }
-
-  // --- Fungsi Konversi Waktu ---
-  String _formatTimezone(String timezoneName) {
-    // Pastikan timezone sudah diinisialisasi di main.dart
-    try {
-      final location = tz.getLocation(timezoneName);
-      final now = tz.TZDateTime.now(location);
-      return DateFormat('HH:mm:ss').format(now);
-    } catch (e) {
-      return 'Error Waktu';
-    }
-  }
-
-  // --- Fungsi Tampilkan Notifikasi (Trigger Booking) ---
-  void _showBookingNotification() async {
-    if (_checkInDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih tanggal check-in terlebih dahulu!')),
-      );
-      return;
-    }
-    
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'booking_channel_id', 
-      'Booking Notifications',
-      channelDescription: 'Notifikasi untuk konfirmasi pemesanan hotel.',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'ticker',
-    );
-    
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    await flutterLocalNotificationsPlugin.show(
-      0, // ID Notifikasi
-      'Pemesanan Berhasil! 🎉 (Notifikasi)', // Judul notifikasi
-      'Hotel Anda telah berhasil dibooking untuk tanggal ${DateFormat('dd MMMM yyyy').format(_checkInDate!)}.', // Isi notifikasi
-      platformChannelSpecifics,
-      payload: 'booking_success',
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking berhasil! Notifikasi lokal telah dikirim.')),
-    );
-  }
-
-  // --- Fungsi Pemilih Tanggal ---
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _checkInDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2026),
-    );
-    if (picked != null && picked != _checkInDate) {
+  // Fungsi untuk memulai pencarian API
+  void _performSearch(String query) {
+    if (query.isNotEmpty) {
       setState(() {
-        _checkInDate = picked;
+        _searchResultFuture = HotelApiService.searchHotels(query);
       });
     }
   }
@@ -97,95 +26,116 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cek Hotel, Konversi & Booking')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      appBar: AppBar(title: const Text('Cari Hotel (SerpAPI)')),
+      body: Column(
+        children: [
+          // 1. Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Cari Hotel (misal: "Yogyakarta")',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () => _performSearch(_searchController.text),
+                ),
+                border: const OutlineInputBorder(),
+              ),
+              onSubmitted: _performSearch,
+            ),
+          ),
+          
+          // 2. Hasil Pencarian (Daftar Hotel)
+          Expanded(
+            child: FutureBuilder<List<HotelModel>>(
+              future: _searchResultFuture,
+              builder: (context, snapshot) {
+                // Saat sedang loading
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                // Jika ada error
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                
+                // Jika data berhasil dimuat tapi kosong
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('Tidak ada hotel ditemukan. Silakan cari.'));
+                }
+                
+                // Tampilkan daftar hotel
+                final hotels = snapshot.data!;
+                return ListView.builder(
+                  itemCount: hotels.length,
+                  itemBuilder: (context, index) {
+                    final hotel = hotels[index];
+                    return _buildHotelCard(context, hotel);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget untuk satu kartu hotel
+  Widget _buildHotelCard(BuildContext context, HotelModel hotel) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 4,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          // Navigasi ke Halaman Detail
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HotelDetailPage(hotel: hotel),
+            ),
+          );
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Bagian Konversi Waktu (Sesuai Kriteria) ---
-            const Text('⏰ Waktu Saat Ini di Berbagai Zona', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Divider(),
-            _buildTimeRow('WIB (Asia/Jakarta)', 'Asia/Jakarta'),
-            _buildTimeRow('WITA (Asia/Makassar)', 'Asia/Makassar'),
-            _buildTimeRow('WIT (Asia/Jayapura)', 'Asia/Jayapura'),
-            _buildTimeRow('London (Europe/London)', 'Europe/London'),
-            const SizedBox(height: 30),
-
-            // --- Bagian Konversi Mata Uang (Min. 3 Mata Uang) ---
-            Text(
-              '💰 Harga Dasar (Contoh): ${NumberFormat.currency(locale: 'id', symbol: 'Rp').format(_priceInIDR)}', 
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+            Image.network(
+              hotel.imageUrl,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => 
+                  Container(height: 180, color: Colors.grey[200], child: Icon(Icons.broken_image)),
             ),
-            const Divider(),
-            ..._currencyRates.entries.map((entry) => 
-              _buildCurrencyRow(entry.key, entry.value)
-            ).toList(),
-            const SizedBox(height: 30),
-
-
-            // --- Bagian Pemilihan Tanggal & Booking (Trigger Notifikasi) ---
-            const Text('📅 Tentukan Tanggal Check-in', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ListTile(
-              leading: const Icon(Icons.date_range),
-              title: Text(_checkInDate == null 
-                  ? 'Klik untuk Pilih Tanggal' 
-                  : 'Tanggal Terpilih: ${DateFormat('EEEE, dd MMMM yyyy').format(_checkInDate!)}'),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () => _selectDate(context),
-            ),
-            const SizedBox(height: 30),
-            
-            Center(
-              child: ElevatedButton.icon(
-                // Tombol akan aktif jika tanggal sudah dipilih
-                onPressed: _checkInDate == null ? null : _showBookingNotification,
-                icon: const Icon(Icons.book),
-                label: const Text('KLIK BOOKING (Trigger Notifikasi)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  textStyle: const TextStyle(fontSize: 16)
-                ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(hotel.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(hotel.address, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[600])),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(hotel.price, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 20),
+                          Text(hotel.rating.toString()),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            )
+            ),
           ],
         ),
-      ),
-    );
-  }
-  
-  // Helper untuk menampilkan zona waktu
-  Widget _buildTimeRow(String label, String timezoneId) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(
-            _formatTimezone(timezoneId),
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper untuk menampilkan konversi mata uang
-  Widget _buildCurrencyRow(String code, double rate) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text('Konversi ke $code:'),
-          Text(
-            _convertCurrency(_priceInIDR, code, rate),
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-          ),
-        ],
       ),
     );
   }
