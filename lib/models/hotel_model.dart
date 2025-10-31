@@ -26,7 +26,6 @@ class HotelModel {
   }
 
   factory HotelModel.fromJson(Map<String, dynamic> json) {
-    // --- Ambil gambar (kadang list of strings atau list of maps) ---
     String image = 'https://via.placeholder.com/300x200.png?text=No+Image';
     final imgs = json['images'];
     if (imgs is List && imgs.isNotEmpty) {
@@ -38,38 +37,64 @@ class HotelModel {
       }
     }
 
-    // --- Ambil rating ---
     final rating = double.tryParse('${json['overall_rating'] ?? 0}') ?? 0.0;
 
-    // --- Ambil harga dari beberapa kemungkinan field ---
+    // 🔍 1️⃣ Ambil harga dari berbagai kemungkinan struktur data
     String priceText = 'Tidak tersedia';
     double priceUSD = 0.0;
 
-    final rpn = json['rate_per_night'];
-    if (rpn is String) {
-      priceText = rpn;
-      priceUSD = _numFromString(rpn);
-    } else if (rpn is Map<String, dynamic>) {
-      // Prioritas extracted_low → extracted_high → extracted
-      if (rpn['extracted_low'] is String) {
-        priceText = rpn['extracted_low'];
-        priceUSD = _numFromString(rpn['extracted_low']);
-      } else if (rpn['extracted_high'] is String) {
-        priceText = rpn['extracted_high'];
-        priceUSD = _numFromString(rpn['extracted_high']);
-      } else if (rpn['extracted'] is String) {
-        priceText = rpn['extracted'];
-        priceUSD = _numFromString(rpn['extracted']);
+    // Case 1: langsung ada di rate_per_night
+    final rate = json['rate_per_night'];
+    if (rate is String) {
+      priceText = rate;
+      priceUSD =
+          double.tryParse(rate.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+    } else if (rate is Map<String, dynamic>) {
+      if (rate['extracted_low'] != null) {
+        priceText = rate['extracted_low'];
+        priceUSD =
+            double.tryParse(
+              rate['extracted_low'].replaceAll(RegExp(r'[^0-9.]'), ''),
+            ) ??
+            0.0;
+      } else if (rate['extracted_high'] != null) {
+        priceText = rate['extracted_high'];
+        priceUSD =
+            double.tryParse(
+              rate['extracted_high'].replaceAll(RegExp(r'[^0-9.]'), ''),
+            ) ??
+            0.0;
       }
     }
 
-    // Fallback lain
-    if (priceUSD == 0.0) {
-      final lower = json['rate_per_night_lower_bound'];
-      if (lower != null) {
-        priceText = '$lower';
-        priceUSD = double.tryParse('$lower') ?? 0.0;
+    // 🔍 2️⃣ Jika tidak ada, cek di rates[0].rate_price
+    if (priceUSD == 0.0 && json['rates'] is List && json['rates'].isNotEmpty) {
+      final firstRate = json['rates'][0];
+      if (firstRate is Map && firstRate['rate_price'] != null) {
+        final priceData = firstRate['rate_price'];
+        if (priceData is Map && priceData['extracted_low'] != null) {
+          priceText = priceData['extracted_low'];
+          priceUSD =
+              double.tryParse(
+                priceData['extracted_low'].replaceAll(RegExp(r'[^0-9.]'), ''),
+              ) ??
+              0.0;
+        } else if (priceData is Map && priceData['extracted_high'] != null) {
+          priceText = priceData['extracted_high'];
+          priceUSD =
+              double.tryParse(
+                priceData['extracted_high'].replaceAll(RegExp(r'[^0-9.]'), ''),
+              ) ??
+              0.0;
+        }
       }
+    }
+
+    // 🔍 3️⃣ Fallback terakhir: rate_per_night_lower_bound
+    if (priceUSD == 0.0 && json['rate_per_night_lower_bound'] != null) {
+      priceText = '\$${json['rate_per_night_lower_bound']}';
+      priceUSD =
+          double.tryParse('${json['rate_per_night_lower_bound']}') ?? 0.0;
     }
 
     return HotelModel(

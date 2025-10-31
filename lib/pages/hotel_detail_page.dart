@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/hotel_model.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tzdata;
 
 class HotelDetailPage extends StatefulWidget {
   final HotelModel hotel;
+
   const HotelDetailPage({super.key, required this.hotel});
 
   @override
@@ -14,69 +17,80 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
   DateTime? _checkInDate;
   DateTime? _checkOutDate;
   TimeOfDay? _checkInTime;
-  String _selectedZone = 'WIB';
-  String _selectedCurrency = 'IDR';
+  String _selectedCurrency = 'USD';
 
   final Map<String, double> _currencyRates = {
     'USD': 1.0,
-    'EUR': 0.92,
-    'JPY': 150.3,
-    'IDR': 15800.0,
+    'IDR': 15500.0,
+    'EUR': 0.93,
+    'JPY': 151.4,
   };
 
-  double _parsePriceToUSD(dynamic priceData) {
-    if (priceData == null) return 0;
-
-    if (priceData is String) {
-      final cleaned = priceData.replaceAll(RegExp(r'[^0-9.]'), '');
-      return double.tryParse(cleaned) ?? 0;
-    }
-
-    if (priceData is Map<String, dynamic>) {
-      if (priceData.containsKey('extracted_low')) {
-        final cleaned = priceData['extracted_low'].replaceAll(RegExp(r'[^0-9.]'), '');
-        return double.tryParse(cleaned) ?? 0;
-      } else if (priceData.containsKey('extracted_high')) {
-        final cleaned = priceData['extracted_high'].replaceAll(RegExp(r'[^0-9.]'), '');
-        return double.tryParse(cleaned) ?? 0;
-      } else if (priceData.containsKey('rate_per_night_lower_bound')) {
-        final cleaned = priceData['rate_per_night_lower_bound'].replaceAll(RegExp(r'[^0-9.]'), '');
-        return double.tryParse(cleaned) ?? 0;
-      }
-    }
-
-    return 0;
+  @override
+  void initState() {
+    super.initState();
+    tzdata.initializeTimeZones();
   }
 
-  String _convertCurrency(double usd, String target) {
-    final converted = usd * _currencyRates[target]!;
-    final format = NumberFormat.currency(
-      locale: 'en_US',
-      symbol: target == 'IDR' ? 'Rp ' : '$target ',
+  double _convertToSelectedCurrency(double usdPrice) {
+    final rate = _currencyRates[_selectedCurrency] ?? 1.0;
+    return usdPrice * rate;
+  }
+
+  String _formatCurrency(double value) {
+    if (_selectedCurrency == 'IDR') {
+      return 'Rp ${value.toStringAsFixed(0)}';
+    } else {
+      return '$_selectedCurrency ${value.toStringAsFixed(2)}';
+    }
+  }
+
+  // Menggabungkan tanggal dan jam check-in
+  DateTime _combineDateTime(DateTime date, TimeOfDay time) {
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  // Fungsi konversi zona waktu otomatis
+  String _convertTimeZone(DateTime dateTime, String locationName) {
+    final location = tz.getLocation(locationName);
+    final tzTime = tz.TZDateTime.from(dateTime, location);
+    final formatted = DateFormat('yyyy-MM-dd HH:mm').format(tzTime);
+    return formatted;
+  }
+
+  Future<void> _selectCheckInDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    return format.format(converted);
+    if (picked != null) setState(() => _checkInDate = picked);
   }
 
-  String _convertTimeZone(DateTime date, String zone) {
-    switch (zone) {
-      case 'WIB':
-        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc().add(const Duration(hours: 7)));
-      case 'WITA':
-        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc().add(const Duration(hours: 8)));
-      case 'WIT':
-        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc().add(const Duration(hours: 9)));
-      case 'London':
-        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc());
-      default:
-        return DateFormat('yyyy-MM-dd HH:mm').format(date);
-    }
+  Future<void> _selectCheckOutDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _checkInDate ?? DateTime.now(),
+      firstDate: _checkInDate ?? DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _checkOutDate = picked);
+  }
+
+  Future<void> _selectCheckInTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) setState(() => _checkInTime = picked);
   }
 
   @override
   Widget build(BuildContext context) {
     final hotel = widget.hotel;
-  final baseUSD = hotel.priceUSD; // double aman untuk dihitung
-
+    final convertedPrice = _convertToSelectedCurrency(hotel.priceUSD);
+    final formattedPrice = _formatCurrency(convertedPrice);
 
     return Scaffold(
       appBar: AppBar(title: Text(hotel.name)),
@@ -85,151 +99,116 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar hotel
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               child: Image.network(
                 hotel.imageUrl,
-                width: double.infinity,
                 height: 200,
+                width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.broken_image, size: 80),
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.broken_image, size: 100),
               ),
             ),
             const SizedBox(height: 16),
-
-            Text(hotel.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(
+              hotel.name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
             Text('Alamat: ${hotel.address}'),
             Text('⭐ Rating: ${hotel.rating}'),
-           Text('Harga (USD): ${hotel.priceText}'),
+            Text('Harga (USD): ${hotel.priceText}'),
+            const Divider(height: 32),
 
-            const Divider(height: 30),
-
-            // Konversi harga
+            // === KONVERSI MATA UANG ===
             const Text('💰 Konversi Mata Uang:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButton<String>(
               value: _selectedCurrency,
-              onChanged: (value) => setState(() => _selectedCurrency = value!),
               items: _currencyRates.keys
-                  .map((code) =>
-                      DropdownMenuItem(value: code, child: Text(code)))
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
+              onChanged: (val) => setState(() => _selectedCurrency = val!),
             ),
-            Text(
-              _convertCurrency(baseUSD, _selectedCurrency),
-              style: const TextStyle(
-                  color: Colors.green, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text(formattedPrice,
+                style: const TextStyle(
+                    color: Colors.green, fontWeight: FontWeight.bold)),
+            const Divider(height: 32),
 
-            const Divider(height: 30),
-
-            // Tanggal check-in & check-out
+            // === PILIH TANGGAL PEMESANAN ===
             const Text('📅 Pilih Tanggal Pemesanan:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 ElevatedButton.icon(
+                  onPressed: _selectCheckInDate,
                   icon: const Icon(Icons.login),
-                  label: Text(_checkInDate == null
-                      ? 'Pilih Check-in'
-                      : DateFormat('yyyy-MM-dd').format(_checkInDate!)),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now().add(const Duration(days: 1)),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(2026),
-                    );
-                    if (picked != null) {
-                      setState(() => _checkInDate = picked);
-                    }
-                  },
+                  label: Text(_checkInDate != null
+                      ? DateFormat('yyyy-MM-dd').format(_checkInDate!)
+                      : 'Pilih Check-in'),
                 ),
+                const SizedBox(width: 16),
                 ElevatedButton.icon(
+                  onPressed: _selectCheckOutDate,
                   icon: const Icon(Icons.logout),
-                  label: Text(_checkOutDate == null
-                      ? 'Pilih Check-out'
-                      : DateFormat('yyyy-MM-dd').format(_checkOutDate!)),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _checkInDate ?? DateTime.now(),
-                      firstDate: _checkInDate ?? DateTime.now(),
-                      lastDate: DateTime(2026),
-                    );
-                    if (picked != null) {
-                      setState(() => _checkOutDate = picked);
-                    }
-                  },
+                  label: Text(_checkOutDate != null
+                      ? DateFormat('yyyy-MM-dd').format(_checkOutDate!)
+                      : 'Pilih Check-out'),
                 ),
               ],
             ),
+            const Divider(height: 32),
 
-            const SizedBox(height: 15),
-
-            // Pilih waktu check-in
+            // === JAM CHECK-IN ===
             const Text('⏰ Pilih Jam Check-in:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             ElevatedButton.icon(
+              onPressed: _selectCheckInTime,
               icon: const Icon(Icons.access_time),
-              label: Text(_checkInTime == null
-                  ? 'Pilih Jam'
-                  : _checkInTime!.format(context)),
-              onPressed: () async {
-                final picked =
-                    await showTimePicker(context: context, initialTime: TimeOfDay.now());
-                if (picked != null) {
-                  setState(() => _checkInTime = picked);
-                }
-              },
+              label: Text(_checkInTime != null
+                  ? _checkInTime!.format(context)
+                  : 'Pilih Jam'),
             ),
+            const SizedBox(height: 16),
 
-            const Divider(height: 30),
-
-            // Pilih zona waktu
-            const Text('🌍 Pilih Zona Waktu:',
+            // === KONVERSI ZONA WAKTU OTOMATIS ===
+            const Text('🌍 Konversi Waktu:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            DropdownButton<String>(
-              value: _selectedZone,
-              onChanged: (value) => setState(() => _selectedZone = value!),
-              items: const [
-                DropdownMenuItem(value: 'WIB', child: Text('WIB (Jakarta)')),
-                DropdownMenuItem(value: 'WITA', child: Text('WITA (Makassar)')),
-                DropdownMenuItem(value: 'WIT', child: Text('WIT (Jayapura)')),
-                DropdownMenuItem(value: 'London', child: Text('London')),
-              ],
-            ),
-
             if (_checkInDate != null && _checkInTime != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text(
-                  '🕒 Check-in ($_selectedZone): ${_convertTimeZone(DateTime(_checkInDate!.year, _checkInDate!.month, _checkInDate!.day, _checkInTime!.hour, _checkInTime!.minute), _selectedZone)}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                      '🕓 WIB (Jakarta): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Jakarta")}'),
+                  Text(
+                      '🕓 WITA (Makassar): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Makassar")}'),
+                  Text(
+                      '🕓 WIT (Jayapura): ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Asia/Jayapura")}'),
+                  Text(
+                      '🕓 London: ${_convertTimeZone(_combineDateTime(_checkInDate!, _checkInTime!), "Europe/London")}'),
+                ],
+              )
+            else
+              const Text(
+                'Pilih jam check-in terlebih dahulu untuk melihat konversi waktu.',
+                style: TextStyle(color: Colors.grey),
               ),
+            const SizedBox(height: 24),
 
-            const SizedBox(height: 25),
-
+            // === TOMBOL PESAN ===
             Center(
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.payment),
+                onPressed: (_checkInDate != null &&
+                        _checkOutDate != null &&
+                        _checkInTime != null)
+                    ? () {}
+                    : null,
+                icon: const Icon(Icons.shopping_bag_outlined),
                 label: const Text('Pesan Sekarang'),
-                onPressed: (_checkInDate == null || _checkOutDate == null)
-                    ? null
-                    : () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('✅ Pemesanan berhasil disimpan!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      },
               ),
             ),
           ],
