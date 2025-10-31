@@ -4,11 +4,15 @@ import 'pages/login_page.dart';
 import 'services/auth_service.dart';
 import 'models/user_model.dart';
 // FIX 3. Import MainScreen
-import '../screen/main_screen.dart';
+import 'screen/main_screen.dart';
 // FIX 1. Import Timezone
 import 'package:timezone/data/latest.dart' as tz;
 // FIX 2a. Import Notifikasi
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+// ✅ Import halaman detail hotel
+import 'pages/hotel_detail_page.dart';
+import 'models/hotel_model.dart';
 
 // FIX 2b. Deklarasi Global Plugin Notifikasi
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -61,6 +65,14 @@ class MyApp extends StatelessWidget {
       title: 'Hive Login Demo',
       theme: ThemeData(primarySwatch: Colors.deepPurple),
       home: initialPage,
+
+      // ✅ Tambahkan route untuk halaman detail hotel
+      routes: {
+        '/hotel_detail': (context) {
+          final hotel = ModalRoute.of(context)!.settings.arguments as HotelModel;
+          return HotelDetailPage(hotel: hotel);
+        },
+      },
     );
   }
 }

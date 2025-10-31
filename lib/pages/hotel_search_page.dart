@@ -55,20 +55,21 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final results = (data['properties'] ??
-            data['search_results']) as List<dynamic>?;
+        final results =
+            (data['properties'] ?? data['search_results']) as List<dynamic>?;
 
         if (results == null || results.isEmpty) {
           setState(() => _errorMessage = 'Tidak ada hotel ditemukan.');
         } else {
           setState(() {
-            _hotels =
-                results.map((item) => HotelModel.fromJson(item)).toList();
+            _hotels = results.map((item) => HotelModel.fromJson(item)).toList();
           });
         }
       } else {
-        setState(() => _errorMessage =
-            'Gagal memuat hotel. Code: ${response.statusCode}');
+        setState(
+          () => _errorMessage =
+              'Gagal memuat hotel. Code: ${response.statusCode}',
+        );
       }
     } catch (e) {
       setState(() => _errorMessage = 'Terjadi kesalahan: $e');
@@ -103,14 +104,17 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
               const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_errorMessage.isNotEmpty)
               Expanded(
-                  child: Center(
-                      child: Text(
-                _errorMessage,
-                style: const TextStyle(color: Colors.red),
-              )))
+                child: Center(
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              )
             else if (_hotels.isEmpty)
               const Expanded(
-                  child: Center(child: Text("Belum ada data hotel.")))
+                child: Center(child: Text("Belum ada data hotel.")),
+              )
             else
               Expanded(
                 child: ListView.builder(
@@ -132,9 +136,10 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
                                 const Icon(Icons.broken_image, size: 50),
                           ),
                         ),
-                        title: Text(hotel.name,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(
+                          hotel.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -144,10 +149,11 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
                               style: const TextStyle(color: Colors.orange),
                             ),
                             Text(
-                              hotel.price,
+                              hotel.priceText,
                               style: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),

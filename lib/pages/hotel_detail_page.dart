@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/hotel_model.dart';
-import '../models/booking_model.dart';
-import '../main.dart'; 
-import '../db/hive_manager.dart';
 
 class HotelDetailPage extends StatefulWidget {
   final HotelModel hotel;
@@ -17,228 +12,226 @@ class HotelDetailPage extends StatefulWidget {
 
 class _HotelDetailPageState extends State<HotelDetailPage> {
   DateTime? _checkInDate;
-  // Ini adalah nilai harga numerik yang kita konversi dari string harga API
-  double _numericPriceIDR = 0; 
-  String _priceSymbol = 'IDR';
+  DateTime? _checkOutDate;
+  TimeOfDay? _checkInTime;
+  String _selectedZone = 'WIB';
+  String _selectedCurrency = 'IDR';
 
   final Map<String, double> _currencyRates = {
-    'USD': 15500.0, 
-    'EUR': 16700.0, 
-    'JPY': 105.0,   
+    'USD': 1.0,
+    'EUR': 0.92,
+    'JPY': 150.3,
+    'IDR': 15800.0,
   };
 
-  @override
-  void initState() {
-    super.initState();
-    _parsePriceToIDR();
-  }
+  double _parsePriceToUSD(dynamic priceData) {
+    if (priceData == null) return 0;
 
-  // Fungsi utilitas untuk mencoba mengkonversi harga string API ke IDR
-  void _parsePriceToIDR() {
-    // Logika ini mengasumsikan API mengembalikan harga dalam USD (misal: $750)
-    String price = widget.hotel.price.replaceAll(RegExp(r'[^0-9.]'), '');
-    if (price.isNotEmpty && price.contains('.')) {
-      try {
-        double priceUSD = double.parse(price);
-        // Konversi ke IDR (asumsi harga API dalam USD)
-        _numericPriceIDR = priceUSD * _currencyRates['USD']!; 
-        _priceSymbol = 'USD'; // Harga dasar dari API adalah USD
-      } catch (e) {
-        _numericPriceIDR = 5000000; // Fallback jika parsing gagal
-        _priceSymbol = 'IDR (Fallback)';
+    if (priceData is String) {
+      final cleaned = priceData.replaceAll(RegExp(r'[^0-9.]'), '');
+      return double.tryParse(cleaned) ?? 0;
+    }
+
+    if (priceData is Map<String, dynamic>) {
+      if (priceData.containsKey('extracted_low')) {
+        final cleaned = priceData['extracted_low'].replaceAll(RegExp(r'[^0-9.]'), '');
+        return double.tryParse(cleaned) ?? 0;
+      } else if (priceData.containsKey('extracted_high')) {
+        final cleaned = priceData['extracted_high'].replaceAll(RegExp(r'[^0-9.]'), '');
+        return double.tryParse(cleaned) ?? 0;
+      } else if (priceData.containsKey('rate_per_night_lower_bound')) {
+        final cleaned = priceData['rate_per_night_lower_bound'].replaceAll(RegExp(r'[^0-9.]'), '');
+        return double.tryParse(cleaned) ?? 0;
       }
-    } else {
-        _numericPriceIDR = 5000000;
-        _priceSymbol = 'IDR (Fallback)';
     }
+
+    return 0;
   }
 
-  // --- Konversi Mata Uang ---
-  String _convertCurrency(double amountIDR, String targetCurrencyCode, double rate) {
-    if (rate == 0) return 'N/A';
-    final amount = amountIDR / rate;
-    final format = NumberFormat.currency(locale: 'en_US', symbol: targetCurrencyCode);
-    return format.format(amount);
+  String _convertCurrency(double usd, String target) {
+    final converted = usd * _currencyRates[target]!;
+    final format = NumberFormat.currency(
+      locale: 'en_US',
+      symbol: target == 'IDR' ? 'Rp ' : '$target ',
+    );
+    return format.format(converted);
   }
 
-  // --- Konversi Waktu (WIB, WITA, WIT, London) ---
-  String _formatTimezone(String timezoneName) {
-    final location = tz.getLocation(timezoneName);
-    final now = tz.TZDateTime.now(location);
-    return DateFormat('HH:mm:ss').format(now);
-  }
-  
-  // --- Proses Booking dan Notifikasi ---
-  void _processBooking() async {
-    if (_checkInDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih tanggal check-in terlebih dahulu!')),
-      );
-      return;
+  String _convertTimeZone(DateTime date, String zone) {
+    switch (zone) {
+      case 'WIB':
+        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc().add(const Duration(hours: 7)));
+      case 'WITA':
+        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc().add(const Duration(hours: 8)));
+      case 'WIT':
+        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc().add(const Duration(hours: 9)));
+      case 'London':
+        return DateFormat('yyyy-MM-dd HH:mm').format(date.toUtc());
+      default:
+        return DateFormat('yyyy-MM-dd HH:mm').format(date);
     }
-    
-    // 1. Simpan ke Riwayat (Hive)
-    final newBooking = BookingModel(
-      hotelName: widget.hotel.name,
-      platform: 'SerpAPI Source', // Asumsi nama platform
-      checkInDate: DateFormat('yyyy-MM-dd').format(_checkInDate!),
-      bookingTime: _formatTimezone('Asia/Jakarta'), // Simpan waktu WIB
-      finalPrice: NumberFormat.currency(locale: 'id', symbol: 'Rp').format(_numericPriceIDR),
-    );
-    await HiveManager.bookingBox.add(newBooking);
-
-    // 2. Tampilkan Notifikasi Lokal
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'booking_channel_id', 'Booking Notifications',
-      channelDescription: 'Notifikasi konfirmasi pemesanan hotel.',
-      importance: Importance.max, priority: Priority.high,
-    );
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    await flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch % 100000, 
-      'Pemesanan Berhasil! 🎉',
-      '${widget.hotel.name} dibooking untuk tanggal ${DateFormat('dd MMM').format(_checkInDate!)}.', 
-      platformChannelSpecifics,
-      payload: 'booking_success',
-    );
-
-    // 3. Beri feedback ke user
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Booking berhasil! Dicek di Riwayat Pemesanan.')),
-    );
-  }
-
-  // --- Fungsi Pemilih Tanggal ---
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _checkInDate ?? DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now().add(const Duration(days: 1)), // Mulai besok
-      lastDate: DateTime(2026),
-    );
-    if (picked != null && picked != _checkInDate) {
-      setState(() {
-        _checkInDate = picked;
-      });
-    }
-  }
-
-  // Helper untuk menampilkan zona waktu
-  Widget _buildTimeRow(String label, String timezoneId) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(
-            _formatTimezone(timezoneId),
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper untuk menampilkan konversi mata uang
-  Widget _buildCurrencyRow(String code, double rate) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text('Konversi ke $code:'),
-          Text(
-            _convertCurrency(_numericPriceIDR, code, rate),
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final hotel = widget.hotel;
+  final baseUSD = hotel.priceUSD; // double aman untuk dihitung
+
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail & Booking Hotel')),
+      appBar: AppBar(title: Text(hotel.name)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar Hotel
+            // Gambar hotel
             ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
+              borderRadius: BorderRadius.circular(10),
               child: Image.network(
-                widget.hotel.imageUrl,
-                height: 200,
+                hotel.imageUrl,
                 width: double.infinity,
+                height: 200,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 200,
-                  color: Colors.grey[300],
-                  child: const Center(child: Text('Gambar tidak tersedia')),
-                ),
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, size: 80),
               ),
             ),
             const SizedBox(height: 16),
 
-            Text(widget.hotel.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(widget.hotel.address, style: TextStyle(color: Colors.grey[600])),
-            const SizedBox(height: 20),
+            Text(hotel.name,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text('Alamat: ${hotel.address}'),
+            Text('⭐ Rating: ${hotel.rating}'),
+           Text('Harga (USD): ${hotel.priceText}'),
 
-            // --- Konversi Harga Mata Uang ---
-            Text(
-              '💰 Harga Asli (${_priceSymbol}): ${widget.hotel.price}', 
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red)
+            const Divider(height: 30),
+
+            // Konversi harga
+            const Text('💰 Konversi Mata Uang:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            DropdownButton<String>(
+              value: _selectedCurrency,
+              onChanged: (value) => setState(() => _selectedCurrency = value!),
+              items: _currencyRates.keys
+                  .map((code) =>
+                      DropdownMenuItem(value: code, child: Text(code)))
+                  .toList(),
             ),
             Text(
-              'Harga Konversi Dasar (Rp): ${NumberFormat.currency(locale: 'id', symbol: 'Rp').format(_numericPriceIDR)}', 
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+              _convertCurrency(baseUSD, _selectedCurrency),
+              style: const TextStyle(
+                  color: Colors.green, fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const Divider(),
-            _buildCurrencyRow('USD', _currencyRates['USD']!),
-            _buildCurrencyRow('EUR', _currencyRates['EUR']!),
-            _buildCurrencyRow('JPY', _currencyRates['JPY']!),
-            const SizedBox(height: 30),
 
-            // --- Pemilihan Tanggal Check-in ---
-            const Text('📅 Tentukan Tanggal Check-in', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ListTile(
-              leading: const Icon(Icons.date_range),
-              title: Text(_checkInDate == null 
-                  ? 'Pilih Tanggal' 
-                  : DateFormat('EEEE, dd MMMM yyyy').format(_checkInDate!)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () => _selectDate(context),
+            const Divider(height: 30),
+
+            // Tanggal check-in & check-out
+            const Text('📅 Pilih Tanggal Pemesanan:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.login),
+                  label: Text(_checkInDate == null
+                      ? 'Pilih Check-in'
+                      : DateFormat('yyyy-MM-dd').format(_checkInDate!)),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now().add(const Duration(days: 1)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2026),
+                    );
+                    if (picked != null) {
+                      setState(() => _checkInDate = picked);
+                    }
+                  },
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.logout),
+                  label: Text(_checkOutDate == null
+                      ? 'Pilih Check-out'
+                      : DateFormat('yyyy-MM-dd').format(_checkOutDate!)),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _checkInDate ?? DateTime.now(),
+                      firstDate: _checkInDate ?? DateTime.now(),
+                      lastDate: DateTime(2026),
+                    );
+                    if (picked != null) {
+                      setState(() => _checkOutDate = picked);
+                    }
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            
-            // --- Konversi Waktu (WIB, WITA, WIT, London) ---
-            const Text('⏰ Waktu Saat Ini', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Divider(),
-            _buildTimeRow('WIB (Jakarta)', 'Asia/Jakarta'),
-            _buildTimeRow('WITA (Makassar)', 'Asia/Makassar'),
-            _buildTimeRow('WIT (Jayapura)', 'Asia/Jayapura'),
-            _buildTimeRow('London', 'Europe/London'),
-            const SizedBox(height: 30),
 
-            // Tombol Booking (Trigger Notifikasi dan Riwayat)
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: _numericPriceIDR == 0 || _checkInDate == null ? null : _processBooking,
-                icon: const Icon(Icons.book_online),
-                label: const Text('KONFIRMASI BOOKING'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+            const SizedBox(height: 15),
+
+            // Pilih waktu check-in
+            const Text('⏰ Pilih Jam Check-in:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.access_time),
+              label: Text(_checkInTime == null
+                  ? 'Pilih Jam'
+                  : _checkInTime!.format(context)),
+              onPressed: () async {
+                final picked =
+                    await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                if (picked != null) {
+                  setState(() => _checkInTime = picked);
+                }
+              },
+            ),
+
+            const Divider(height: 30),
+
+            // Pilih zona waktu
+            const Text('🌍 Pilih Zona Waktu:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            DropdownButton<String>(
+              value: _selectedZone,
+              onChanged: (value) => setState(() => _selectedZone = value!),
+              items: const [
+                DropdownMenuItem(value: 'WIB', child: Text('WIB (Jakarta)')),
+                DropdownMenuItem(value: 'WITA', child: Text('WITA (Makassar)')),
+                DropdownMenuItem(value: 'WIT', child: Text('WIT (Jayapura)')),
+                DropdownMenuItem(value: 'London', child: Text('London')),
+              ],
+            ),
+
+            if (_checkInDate != null && _checkInTime != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  '🕒 Check-in ($_selectedZone): ${_convertTimeZone(DateTime(_checkInDate!.year, _checkInDate!.month, _checkInDate!.day, _checkInTime!.hour, _checkInTime!.minute), _selectedZone)}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-            )
+
+            const SizedBox(height: 25),
+
+            Center(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.payment),
+                label: const Text('Pesan Sekarang'),
+                onPressed: (_checkInDate == null || _checkOutDate == null)
+                    ? null
+                    : () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✅ Pemesanan berhasil disimpan!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+              ),
+            ),
           ],
         ),
       ),
