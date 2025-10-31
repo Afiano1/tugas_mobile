@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import 'hotel_search_page.dart'; // Sub Menu 1
 import 'map_page.dart'; // Sub Menu 2 (LBS)
-import 'platform_page.dart'; // Sub Menu 3 (API/Pencarian)
+// import 'platform_page.txt'; // Sub Menu 3 (API/Pencarian)
 import 'history_page.dart'; // Sub Menu 4 (Riwayat)
 
 class HomeTab extends StatelessWidget {
@@ -13,17 +13,25 @@ class HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     // List menu untuk Home
     final List<Map<String, dynamic>> menuItems = [
-      {'title': 'Cek Hotel & Booking', 'icon': Icons.apartment, 'page': HotelSearchPage()},
+      {
+        'title': 'Cek Hotel & Booking',
+        'icon': Icons.apartment,
+        'page': HotelSearchPage(),
+      },
       {'title': 'Lokasi Hotel (Maps)', 'icon': Icons.map, 'page': MapPage()},
-      {'title': 'Cari Platform Booking', 'icon': Icons.business, 'page': PlatformPage()},
-      {'title': 'Riwayat Pemesanan', 'icon': Icons.history, 'page': HistoryPage()},
+      // {'title': 'Cari Platform Booking', 'icon': Icons.business, 'page': PlatformPage()},
+      {
+        'title': 'Riwayat Pemesanan',
+        'icon': Icons.history,
+        'page': HistoryPage(),
+      },
     ];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Dashboard'),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications))
+          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
         ],
       ),
       body: SingleChildScrollView(
@@ -32,19 +40,26 @@ class HomeTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Hello...
-            Text('Hello, ${user.username}!', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              'Hello, ${user.username}!',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
 
             // Gambar dengan Kutipan
             _buildQuoteCard(),
             const SizedBox(height: 30),
 
-            const Text('Fitur Utama Proyek', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Fitur Utama Proyek',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const Divider(),
 
             // 4 Menu Utama dalam Grid
             GridView.builder(
-              physics: const NeverScrollableScrollPhysics(), // Menonaktifkan scroll GridView
+              physics:
+                  const NeverScrollableScrollPhysics(), // Menonaktifkan scroll GridView
               shrinkWrap: true,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -76,7 +91,9 @@ class HomeTab extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           image: const DecorationImage(
-            image: AssetImage('assets/hotel_bg.jpg'), // Ganti dengan path gambar Anda
+            image: AssetImage(
+              'assets/hotel_bg.jpg',
+            ), // Ganti dengan path gambar Anda
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
           ),
@@ -99,7 +116,12 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItemCard(BuildContext context, String title, IconData icon, Widget page) {
+  Widget _buildMenuItemCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Widget page,
+  ) {
     return InkWell(
       onTap: () {
         Navigator.push(context, MaterialPageRoute(builder: (_) => page));
@@ -111,7 +133,11 @@ class HomeTab extends StatelessWidget {
           children: [
             Icon(icon, size: 40, color: Colors.deepPurple),
             const SizedBox(height: 8),
-            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14),
+            ),
           ],
         ),
       ),
