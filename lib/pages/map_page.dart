@@ -1,10 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -14,109 +11,9 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  LatLng _userLocation = const LatLng(-7.7956, 110.3695);
+  LatLng _userLocation = const LatLng(-7.7956, 110.3695); // Default: Yogyakarta
   bool _isLoadingLocation = true;
   String _locationStatus = 'Mencari lokasi Anda...';
-  final List<Marker> _hotelMarkers = [];
-
-  Future<void> _getCurrentLocation() async {
-    setState(() {
-      _isLoadingLocation = true;
-      _locationStatus = 'Memeriksa izin lokasi...';
-    });
-
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _setLocationStatus('Layanan lokasi dimatikan. Aktifkan untuk lanjut.');
-      return;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        _setLocationStatus('Izin lokasi ditolak oleh pengguna.');
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      _setLocationStatus('Izin lokasi ditolak permanen. Buka Pengaturan.');
-      return;
-    }
-
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      setState(() {
-        _userLocation = LatLng(position.latitude, position.longitude);
-        _isLoadingLocation = false;
-        _locationStatus =
-            'Lokasi: ${_userLocation.latitude}, ${_userLocation.longitude}';
-      });
-
-      await _fetchNearbyHotels();
-    } catch (e) {
-      _setLocationStatus('Gagal mendapatkan lokasi: $e');
-    }
-  }
-
-  void _setLocationStatus(String status) {
-    setState(() {
-      _isLoadingLocation = false;
-      _locationStatus = status;
-    });
-  }
-
-  /// 🔍 Ambil hotel di sekitar lokasi user menggunakan SerpAPI
-  Future<void> _fetchNearbyHotels() async {
-    final apiKey = dotenv.env['SERPAPI_KEY'];
-    if (apiKey == null || apiKey.isEmpty) {
-      debugPrint('❌ API key SerpAPI tidak ditemukan di .env');
-      return;
-    }
-
-    final url =
-        'https://serpapi.com/search.json?engine=google_hotels&hl=id&q=hotel&ll=${_userLocation.latitude},${_userLocation.longitude}&radius=2000&api_key=$apiKey';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        final results = data['properties'] as List<dynamic>? ?? [];
-        List<Marker> markers = [];
-
-        for (var hotel in results) {
-          final gps = hotel['gps_coordinates'];
-          if (gps != null) {
-            final lat = gps['latitude'];
-            final lon = gps['longitude'];
-            if (lat != null && lon != null) {
-              markers.add(
-                Marker(
-                  point: LatLng(lat, lon),
-                  child: const Icon(
-                    Icons.location_city,
-                    color: Colors.redAccent,
-                    size: 30,
-                  ),
-                ),
-              );
-            }
-          }
-        }
-
-        setState(() => _hotelMarkers.addAll(markers));
-      } else {
-        debugPrint('Gagal memuat hotel: ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('Error saat memuat hotel: $e');
-    }
-  }
 
   @override
   void initState() {
@@ -124,54 +21,108 @@ class _MapPageState extends State<MapPage> {
     _getCurrentLocation();
   }
 
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+      _locationStatus = 'Memeriksa izin lokasi...';
+    });
+
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Cek apakah layanan lokasi aktif
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _setLocationStatus('Layanan lokasi dinonaktifkan.');
+      return;
+    }
+
+    // Cek izin lokasi
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _setLocationStatus('Izin lokasi ditolak pengguna.');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _setLocationStatus('Izin lokasi ditolak permanen. Aktifkan di pengaturan.');
+      return;
+    }
+
+    // Ambil lokasi user
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+        _isLoadingLocation = false;
+        _locationStatus =
+            'Lokasi Anda: ${_userLocation.latitude}, ${_userLocation.longitude}';
+      });
+    } catch (e) {
+      _setLocationStatus('Gagal mendapatkan lokasi: $e');
+    }
+  }
+
+  void _setLocationStatus(String text) {
+    setState(() {
+      _isLoadingLocation = false;
+      _locationStatus = text;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lokasi Hotel (Peta Aman)')),
+      appBar: AppBar(title: const Text('Lokasi Hotel (Maps)')),
       body: Stack(
         children: [
           FlutterMap(
-            options: MapOptions(center: _userLocation, zoom: 13.0),
+            options: MapOptions(center: _userLocation, zoom: 13),
             children: [
+              // 🌍 Gunakan tile yang bebas blokir
               TileLayer(
                 urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
+                    'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c'],
                 userAgentPackageName: 'com.example.app',
-                retinaMode: RetinaMode.isHighDensity(context), // ✅ Fix warning
+                retinaMode: RetinaMode.isHighDensity(context),
               ),
 
-              // 🔹 Radius sekitar user
+              // 🔹 Tambahkan radius sekitar user
               CircleLayer(
                 circles: [
                   CircleMarker(
                     point: _userLocation,
-                    color: Colors.blue.withOpacity(0.15),
+                    color: Colors.blue.withOpacity(0.2),
                     borderStrokeWidth: 2,
                     borderColor: Colors.blueAccent,
-                    radius: 500,
+                    radius: 400,
                   ),
                 ],
               ),
 
-              // 🔹 Marker user dan hotel
+              // 📍 Marker lokasi pengguna
               MarkerLayer(
                 markers: [
                   Marker(
                     point: _userLocation,
                     child: const Icon(
                       Icons.person_pin_circle,
-                      color: Colors.blue,
+                      color: Colors.blueAccent,
                       size: 45,
                     ),
                   ),
-                  ..._hotelMarkers,
                 ],
               ),
             ],
           ),
 
-          // Status lokasi user
+          // Status lokasi
           Positioned(
             bottom: 10,
             left: 10,
@@ -179,7 +130,7 @@ class _MapPageState extends State<MapPage> {
             child: Card(
               color: Colors.white.withOpacity(0.9),
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8.0),
                 child: Text(
                   _locationStatus,
                   style: TextStyle(

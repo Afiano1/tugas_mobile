@@ -42,7 +42,7 @@ dependencies:
   flutter_local_notifications: ^17.2.1 # Untuk notifikasi lokal
   path_provider: ^2.0.15 # Untuk mendapatkan direktori aplikasi (Hive)
   permission_handler: ^11.3.0 # Untuk meminta izin lokasi (LBS)
-  flutter_dotenv: ^6.0.0
+  flutter_dotenv: ^5.1.0
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -69,6 +69,10 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
+
+  assets:
+    - .env
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:

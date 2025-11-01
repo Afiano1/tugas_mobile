@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:permission_handler/permission_handler.dart'; // ✅ Tambahkan ini
+import 'package:permission_handler/permission_handler.dart'; // ✅ Untuk izin notifikasi
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // ✅ Perbaikan import (tanpa alias)
 import 'db/hive_manager.dart';
 import 'models/user_model.dart';
 import 'services/auth_service.dart';
@@ -11,7 +12,6 @@ import 'pages/hotel_search_page.dart';
 import 'pages/hotel_detail_page.dart';
 import 'screen/main_screen.dart';
 import 'models/hotel_model.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // ✅ Tambahkan ini
 
 // 🔔 Global notifikasi plugin
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -38,8 +38,7 @@ Future<void> _initializeNotifications() async {
 
   final androidPlugin = flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >();
+          AndroidFlutterLocalNotificationsPlugin>();
 
   // ✅ Buat channel jika belum ada
   await androidPlugin?.createNotificationChannel(androidChannel);
@@ -59,17 +58,23 @@ Future<Widget> _getInitialPage() async {
   }
 }
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env"); // ✅ Muat variabel lingkungan
+
+  // ✅ Muat variabel lingkungan dari file .env
+  await dotenv.load(fileName: ".env");
+
+  // ✅ Inisialisasi Hive & database lokal
   await Hive.initFlutter();
   await HiveManager.init();
-  tz.initializeTimeZones();
 
-  // 🔔 Inisialisasi notifikasi lengkap (channel + izin)
+  // ✅ Inisialisasi timezone & notifikasi
+  tz.initializeTimeZones();
   await _initializeNotifications();
 
+  // ✅ Tentukan halaman awal (login atau dashboard)
   final initialPage = await _getInitialPage();
+
   runApp(MyApp(initialPage: initialPage));
 }
 
