@@ -123,7 +123,7 @@ class _HomeTabState extends State<HomeTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Welcome, ${widget.user.displayName} 👋",
+                      "Welcome, ${widget.user.username} 👋",
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -159,7 +159,7 @@ class _HomeTabState extends State<HomeTab> {
 
             /// 🔹 Slider hotel
             const Text(
-              "Top Rated Hotels ⭐",
+              "Picture ",
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -173,7 +173,7 @@ class _HomeTabState extends State<HomeTab> {
 
             /// 🔹 Fitur utama proyek
             const Text(
-              'Fitur Utama Proyek',
+              'Fitur ',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

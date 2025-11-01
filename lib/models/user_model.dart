@@ -8,16 +8,14 @@ class UserModel extends HiveObject {
   String username;
 
   @HiveField(1)
-  String password;
+  String email;
 
   @HiveField(2)
-  String? email; // ✅ Tambahkan ini
+  String password;
 
   UserModel({
     required this.username,
+    required this.email,
     required this.password,
-    this.email,
-    this.displayName,
   });
-  String? displayName; // ✅ Tambahkan ini
 }

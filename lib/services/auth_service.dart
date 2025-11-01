@@ -4,70 +4,71 @@ import '../db/hive_manager.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  // Fungsi enkripsi password menggunakan SHA256
+  /// 🔹 Enkripsi password menggunakan SHA256
   static String _encrypt(String password) {
     return sha256.convert(utf8.encode(password)).toString();
   }
 
-  // REGISTER
-  static Future<bool> register(
-    String username,
-    String password,
-    String displayName,
-  ) async {
+  /// 🔹 REGISTER USER
+  static Future<bool> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
     final box = HiveManager.userBox;
     final userKey = username.toLowerCase();
 
+    // Cegah duplikasi user
     if (box.containsKey(userKey)) {
       return false; // Username sudah terdaftar
     }
 
+    // Enkripsi password
     final encrypted = _encrypt(password);
 
-    await box.put(
-      userKey,
-      UserModel(
-        username: username,
-        password: encrypted,
-        displayName: displayName,
-      ),
+    // Simpan user baru ke Hive
+    final newUser = UserModel(
+      username: username,
+      email: email,
+      password: encrypted,
     );
 
+    await box.put(userKey, newUser);
     return true;
   }
 
-  // LOGIN
+  /// 🔹 LOGIN USER
   static Future<UserModel?> login(String username, String password) async {
     final userKey = username.toLowerCase();
     final user = HiveManager.userBox.get(userKey);
 
     if (user != null && user.password == _encrypt(password)) {
-      // Login berhasil, simpan session
+      // Simpan sesi login
       await HiveManager.sessionBox.put('isLoggedIn', true);
       await HiveManager.sessionBox.put('currentUser', userKey);
       return user;
     }
 
-    return null; // Login gagal
+    return null; // Gagal login
   }
 
-  // LOGOUT
+  /// 🔹 LOGOUT USER
   static Future<void> logout() async {
     await HiveManager.sessionBox.clear();
   }
 
-  // GET CURRENT USER FOR SESSION CHECK
+  /// 🔹 GET CURRENT USER (cek sesi login)
   static UserModel? getCurrentUser() {
     final isLoggedIn = HiveManager.sessionBox.get('isLoggedIn') ?? false;
     final usernameKey = HiveManager.sessionBox.get('currentUser');
 
     if (isLoggedIn && usernameKey != null) {
-      // Mengambil user dari userBox menggunakan username key
       return HiveManager.userBox.get(usernameKey);
     }
     return null;
   }
 
+  /// 🔹 Ambil semua user dari Hive
   static List<UserModel> getAllUsers() {
     final box = HiveManager.userBox;
     return box.values.toList();

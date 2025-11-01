@@ -64,16 +64,16 @@ class _ProfileTabState extends State<ProfileTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Email (tidak bisa diubah)
+            // Email (non-editable)
             TextField(
               enabled: false,
               decoration: InputDecoration(
                 labelText: 'Email',
-                hintText: widget.user.email ?? widget.user.username,
+                hintText: widget.user.email,
                 labelStyle: const TextStyle(color: Colors.grey),
                 disabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
                   borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.grey),
                 ),
               ),
             ),
@@ -91,7 +91,7 @@ class _ProfileTabState extends State<ProfileTab> {
                   borderRadius: BorderRadius.all(Radius.circular(10)),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: lightGreen),
+                  borderSide: const BorderSide(color: lightGreen),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -108,6 +108,13 @@ class _ProfileTabState extends State<ProfileTab> {
             ),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             onPressed: () {
               final newUsername = usernameController.text.trim();
               if (newUsername.isNotEmpty) {
@@ -122,13 +129,6 @@ class _ProfileTabState extends State<ProfileTab> {
               }
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
             child: const Text('Simpan'),
           ),
         ],
@@ -153,6 +153,7 @@ class _ProfileTabState extends State<ProfileTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // 🔹 Avatar
             Stack(
               alignment: Alignment.bottomRight,
               children: [
@@ -180,7 +181,7 @@ class _ProfileTabState extends State<ProfileTab> {
             ),
             const SizedBox(height: 12),
 
-            /// 🔹 Menampilkan Username (editable)
+            // 🔹 Username (editable)
             Text(
               _username ?? widget.user.username,
               style: const TextStyle(
@@ -190,9 +191,18 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             ),
 
+            // 🔹 Email (readonly di bawah username)
+            Text(
+              widget.user.email,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+
             const Divider(height: 30, color: lightGreen, thickness: 1),
 
-            /// 🔹 Logout
+            // 🔹 Logout
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(
@@ -203,7 +213,7 @@ class _ProfileTabState extends State<ProfileTab> {
             ),
             const Divider(color: lightGreen),
 
-            /// 🔹 About Us
+            // 🔹 About Us
             ListTile(
               leading: const Icon(Icons.info_outline, color: primaryColor),
               title: const Text(
