@@ -1,4 +1,4 @@
-plugins {
+shrinkResourcesplugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     // Flutter Gradle Plugin harus selalu diletakkan terakhir
@@ -9,13 +9,13 @@ android {
     namespace = "com.example.projek_mobile_teori1"
 
     // Gunakan compileSdk minimal 33 agar image_picker dan kamera berfungsi
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
         applicationId = "com.example.projek_mobile_teori1"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 34
+        minSdk = 21
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
