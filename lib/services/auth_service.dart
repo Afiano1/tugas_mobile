@@ -13,22 +13,27 @@ class AuthService {
   static Future<bool> register(
     String username,
     String password,
+    String displayName,
   ) async {
     final box = HiveManager.userBox;
-    final userKey = username.toLowerCase(); // Gunakan username lowercase sebagai key
+    final userKey = username.toLowerCase();
 
-    // Cek apakah username sudah ada
     if (box.containsKey(userKey)) {
       return false; // Username sudah terdaftar
     }
 
     final encrypted = _encrypt(password);
-    
+
     await box.put(
-      userKey, // Key
-      UserModel(username: username, password: encrypted), // Value
+      userKey,
+      UserModel(
+        username: username,
+        password: encrypted,
+        displayName: displayName,
+      ),
     );
-    return true; // Registrasi berhasil
+
+    return true;
   }
 
   // LOGIN

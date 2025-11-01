@@ -19,17 +19,20 @@ class UserModelAdapter extends TypeAdapter<UserModel> {
     return UserModel(
       username: fields[0] as String,
       password: fields[1] as String,
+      displayName: fields[2] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserModel obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.username)
       ..writeByte(1)
-      ..write(obj.password);
+      ..write(obj.password)
+      ..writeByte(2)
+      ..write(obj.displayName);
   }
 
   @override
