@@ -36,14 +36,21 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     tzdata.initializeTimeZones();
   }
 
+  /// 🔹 Konversi USD ke mata uang yang dipilih
   double _convertToSelectedCurrency(double usdPrice) {
     final rate = _currencyRates[_selectedCurrency] ?? 1.0;
     return usdPrice * rate;
   }
 
+  /// 🔹 Format tampilan angka mata uang
   String _formatCurrency(double value) {
     if (_selectedCurrency == 'IDR') {
-      return 'Rp ${value.toStringAsFixed(0)}';
+      final formatter = NumberFormat.currency(
+        locale: 'id_ID',
+        symbol: 'Rp ',
+        decimalDigits: 0,
+      );
+      return formatter.format(value);
     } else {
       return '$_selectedCurrency ${value.toStringAsFixed(2)}';
     }
@@ -53,6 +60,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
+  /// 🔹 Konversi zona waktu
   String _convertTimeZone(DateTime dateTime, String locationName) {
     final location = tz.getLocation(locationName);
     final tzTime = tz.TZDateTime.from(dateTime, location);
@@ -90,8 +98,15 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
   @override
   Widget build(BuildContext context) {
     final hotel = widget.hotel;
-    final convertedPrice = _convertToSelectedCurrency(hotel.priceUSD);
-    final formattedPrice = _formatCurrency(convertedPrice);
+
+    // 🔹 Pastikan tidak error bila harga tidak tersedia
+    final hasPrice = hotel.priceUSD > 0;
+    final convertedPrice = hasPrice
+        ? _convertToSelectedCurrency(hotel.priceUSD)
+        : 0.0;
+    final formattedPrice = hasPrice
+        ? _formatCurrency(convertedPrice)
+        : 'Tidak tersedia';
 
     return Scaffold(
       appBar: AppBar(title: Text(hotel.name)),
@@ -117,11 +132,17 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
-            Text('Alamat: ${hotel.address}'),
-            Text('⭐ Rating: ${hotel.rating}'),
-            Text('Harga (USD): ${hotel.priceText}'),
+            Text(
+              'Deskripsi: ${hotel.address.isNotEmpty ? hotel.address : "-"}',
+            ),
+            Text('⭐ Rating: ${hotel.rating.toStringAsFixed(2)}'),
+            Text(
+              'Harga (USD): ${hotel.priceText.isNotEmpty ? hotel.priceText : "Tidak tersedia"} / malam',
+            ),
+
             const Divider(height: 32),
 
+            // 🔹 Konversi mata uang
             const Text(
               '💰 Konversi Mata Uang:',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -134,12 +155,13 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               onChanged: (val) => setState(() => _selectedCurrency = val!),
             ),
             Text(
-              formattedPrice,
+              hasPrice ? '$formattedPrice / malam' : 'Tidak tersedia',
               style: const TextStyle(
                 color: Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             const Divider(height: 32),
 
             const Text(
@@ -169,6 +191,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                 ),
               ],
             ),
+
             const Divider(height: 32),
 
             const Text(
@@ -184,6 +207,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                     : 'Pilih Jam',
               ),
             ),
+
             const Divider(height: 32),
 
             const Text(
@@ -213,8 +237,10 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                 'Pilih jam check-in terlebih dahulu untuk melihat konversi waktu.',
                 style: TextStyle(color: Colors.grey),
               ),
+
             const SizedBox(height: 24),
 
+            // 🔹 Tombol pemesanan
             Center(
               child: ElevatedButton.icon(
                 onPressed:
@@ -225,7 +251,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                         // 🔹 1. Buat instance BookingModel
                         final booking = BookingModel(
                           hotelName: hotel.name,
-                          platform: 'SerpAPI',
+                          platform: 'Flutter App',
                           checkInDate: DateFormat(
                             'yyyy-MM-dd',
                           ).format(_checkInDate!),
@@ -235,11 +261,11 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                           ).format(DateTime.now()),
                         );
 
-                        // 🔹 2. Simpan ke Hive melalui HiveManager
+                        // 🔹 2. Simpan ke Hive
                         final box = HiveManager.bookingBox;
                         await box.add(booking);
 
-                        // 🔹 3. Kirim notifikasi yang tampil di tray (background)
+                        // 🔹 3. Kirim notifikasi
                         const androidDetails = AndroidNotificationDetails(
                           'booking_channel',
                           'Booking Notifications',
@@ -258,7 +284,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                           notifDetails,
                         );
 
-                        // 🔹 4. Kembali ke halaman utama + tampilkan snackbar
+                        // 🔹 4. Kembali ke halaman utama
                         if (context.mounted) {
                           Navigator.of(
                             context,
