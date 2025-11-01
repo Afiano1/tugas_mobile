@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    id("org.jetbrains.kotlin.android")
     // Flutter Gradle Plugin harus diletakkan setelah plugin Android dan Kotlin
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -18,20 +18,25 @@ android {
         versionName = flutter.versionName
     }
 
-    // Tambahkan blok ini untuk dukungan Java 8+ dan desugaring
+    // ✅ Gunakan Java 17 (hilangkan warning source 8)
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
+    // ✅ Pastikan Kotlin juga pakai Java 17
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "17"
+    }
+
+    // ✅ Tambahkan jvmToolchain agar Gradle modern bisa auto pilih versi Java yang benar
+    kotlin {
+        jvmToolchain(17)
     }
 
     buildTypes {
         getByName("release") {
-            // Masih menggunakan signing debug agar bisa run release dengan mudah
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -42,9 +47,7 @@ flutter {
 }
 
 dependencies {
-    // Tambahkan ini untuk fitur desugaring
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
 
-    // Kotlin standar library
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 }

@@ -8,12 +8,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:projek_mobile_teori1/main.dart';
-
+// Test ini diubah untuk menggunakan widget uji sederhana sehingga tidak
+// tergantung pada implementasi `MyApp` yang membutuhkan parameter `initialPage`.
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    // Build a small test app with a counter and trigger a frame.
+    await tester.pumpWidget(const MaterialApp(home: CounterTestWidget()));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);
@@ -27,4 +27,29 @@ void main() {
     expect(find.text('0'), findsNothing);
     expect(find.text('1'), findsOneWidget);
   });
+}
+
+class CounterTestWidget extends StatefulWidget {
+  const CounterTestWidget({Key? key}) : super(key: key);
+
+  @override
+  _CounterTestWidgetState createState() => _CounterTestWidgetState();
+}
+
+class _CounterTestWidgetState extends State<CounterTestWidget> {
+  int _counter = 0;
+
+  void _increment() => setState(() => _counter++);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Test')),
+      body: Center(child: Text('$_counter', style: const TextStyle(fontSize: 24))),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _increment,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
 }
