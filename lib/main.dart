@@ -11,6 +11,7 @@ import 'pages/hotel_search_page.dart';
 import 'pages/hotel_detail_page.dart';
 import 'screen/main_screen.dart';
 import 'models/hotel_model.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // ✅ Tambahkan ini
 
 // 🔔 Global notifikasi plugin
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -60,6 +61,7 @@ Future<Widget> _getInitialPage() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env"); // ✅ Muat variabel lingkungan
   await Hive.initFlutter();
   await HiveManager.init();
   tz.initializeTimeZones();
