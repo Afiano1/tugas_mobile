@@ -12,7 +12,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController(); // Input Konfirmasi Password
+  final confirmPasswordController = TextEditingController();
 
   void _register() async {
     final username = usernameController.text.trim();
@@ -20,21 +20,22 @@ class _RegisterPageState extends State<RegisterPage> {
     final confirmPassword = confirmPasswordController.text.trim();
 
     if (username.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Semua field harus diisi!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Semua field harus diisi!')));
       return;
     }
 
-    if (password != confirmPassword) { // Validasi Konfirmasi Password
+    if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password dan Konfirmasi Password tidak cocok!')),
+        const SnackBar(
+          content: Text('Password dan Konfirmasi Password tidak cocok!'),
+        ),
       );
       return;
     }
 
     final success = await AuthService.register(username, password);
-
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Registrasi berhasil! Silahkan Login.')),
@@ -52,18 +53,106 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    const primaryColor = Color(0xFF556B2F);
+    const accentColor = Color(0xFF8FA31E);
+    const bgColor = Color(0xFFEFF5D2);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(controller: usernameController, decoration: const InputDecoration(labelText: 'Username / Email')),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
-            TextField(controller: confirmPasswordController, decoration: const InputDecoration(labelText: 'Confirm Password'), obscureText: true),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: _register, child: const Text('Daftar')),
-          ],
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Spacer(),
+              Center(
+                child: Column(
+                  children: [
+                    Image.asset('assets/images/logo.png', width: 150),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Create your Account',
+                      style: TextStyle(color: primaryColor, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 40),
+              TextField(
+                controller: usernameController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  filled: true,
+                  fillColor: bgColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  filled: true,
+                  fillColor: bgColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  filled: true,
+                  fillColor: bgColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Sign up',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                  ),
+                  child: const Text(
+                    "Already have an account? Sign in",
+                    style: TextStyle(color: primaryColor),
+                  ),
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
         ),
       ),
     );

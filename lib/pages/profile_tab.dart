@@ -3,6 +3,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'login_page.dart';
 import 'about_us_page.dart';
+import '../db/hive_manager.dart';
 
 class ProfileTab extends StatefulWidget {
   final UserModel user;
@@ -18,13 +19,19 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   void initState() {
     super.initState();
-    _username = widget.user.username;
+    // ✅ Ambil data user dari Hive jika tersedia, untuk menjaga data tetap tersimpan
+    final storedUser = HiveManager.userBox.get(widget.user.username);
+    if (storedUser != null && storedUser.username.isNotEmpty) {
+      _username = storedUser.username;
+    } else {
+      _username = widget.user.username;
+    }
   }
 
-  // Fungsi Logout
-  void _logout(BuildContext context) async {
+  // ✅ Fungsi Logout aman dari context async
+  Future<void> _logout(BuildContext context) async {
     await AuthService.logout();
-    if (!mounted) return;
+    if (!mounted) return; // Hindari context access setelah dispose
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -32,10 +39,11 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  // Fungsi Edit Nama Profil
-  void _editProfile(BuildContext context) async {
-    final TextEditingController nameController =
-        TextEditingController(text: _username);
+  // ✅ Fungsi Edit Nama Profil + Simpan ke Hive
+  Future<void> _editProfile(BuildContext context) async {
+    final TextEditingController nameController = TextEditingController(
+      text: _username,
+    );
 
     await showDialog(
       context: context,
@@ -52,9 +60,17 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                _username = nameController.text;
-              });
+              final newName = nameController.text.trim();
+              if (newName.isNotEmpty) {
+                setState(() => _username = newName);
+
+                // ✅ Simpan ke Hive
+                final user = HiveManager.userBox.get(widget.user.username);
+                if (user != null) {
+                  user.username = newName;
+                  user.save();
+                }
+              }
               Navigator.pop(context);
             },
             child: const Text('Simpan'),
@@ -67,24 +83,23 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: Colors.purple,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Foto profil diganti ikon orang
+            // ✅ Avatar default (tanpa upload)
             Stack(
               alignment: Alignment.bottomRight,
               children: [
                 const CircleAvatar(
                   radius: 50,
                   backgroundColor: Colors.purpleAccent,
-                  child: Icon(
-                    Icons.person,
-                    size: 70,
-                    color: Colors.white,
-                  ),
+                  child: Icon(Icons.person, size: 70, color: Colors.white),
                 ),
                 Positioned(
                   bottom: 0,
@@ -103,15 +118,18 @@ class _ProfileTabState extends State<ProfileTab> {
                 ),
               ],
             ),
-
             const SizedBox(height: 10),
             Text(
               _username ?? '',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const Divider(height: 30),
 
-            // Logout
+            // ✅ Tombol Logout aman
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
@@ -119,7 +137,7 @@ class _ProfileTabState extends State<ProfileTab> {
             ),
             const Divider(),
 
-            // About Us
+            // ✅ Menu About Us
             ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('About Us'),
