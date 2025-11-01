@@ -1,37 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../models/user_model.dart';
-import 'hotel_search_page.dart'; // Sub Menu 1
-import 'map_page.dart'; // Sub Menu 2 (LBS)
-// import 'platform_page.txt'; // Sub Menu 3 (API/Pencarian)
-import 'history_page.dart'; // Sub Menu 4 (Riwayat)
+import 'hotel_search_page.dart';
+import 'history_page.dart';
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   final UserModel user;
   const HomeTab({super.key, required this.user});
 
   @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  String _locationName = 'Mendeteksi lokasi...';
+  bool _isGettingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserLocation();
+  }
+
+  /// ✅ Ambil lokasi pengguna dan konversi ke nama tempat
+  Future<void> _getUserLocation() async {
+    setState(() => _isGettingLocation = true);
+
+    try {
+      // Pastikan layanan lokasi aktif
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _locationName = 'Layanan lokasi dinonaktifkan';
+          _isGettingLocation = false;
+        });
+        return;
+      }
+
+      // Cek dan minta izin lokasi
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _locationName = 'Izin lokasi ditolak';
+            _isGettingLocation = false;
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _locationName = 'Izin lokasi ditolak permanen';
+          _isGettingLocation = false;
+        });
+        return;
+      }
+
+      // Ambil posisi terkini
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Konversi ke nama lokasi (kecamatan / kota)
+      final placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+
+      String finalText = 'Lokasi tidak diketahui';
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final kec = (p.subAdministrativeArea ?? '').trim();
+        final kota = (p.locality ?? p.administrativeArea ?? '').trim();
+        finalText = "📍 ${kec.isNotEmpty ? kec : kota}";
+      }
+
+      setState(() {
+        _locationName = finalText;
+        _isGettingLocation = false;
+      });
+    } catch (e) {
+      setState(() {
+        _locationName = 'Gagal mendapatkan lokasi: $e';
+        _isGettingLocation = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // List menu untuk Home
     final List<Map<String, dynamic>> menuItems = [
       {
         'title': 'Cek Hotel & Booking',
         'icon': Icons.apartment,
-        'page': HotelSearchPage(),
+        'page': const HotelSearchPage(),
       },
-      {'title': 'Lokasi Hotel (Maps)', 'icon': Icons.map, 'page': MapPage()},
-      // {'title': 'Cari Platform Booking', 'icon': Icons.business, 'page': PlatformPage()},
       {
         'title': 'Riwayat Pemesanan',
         'icon': Icons.history,
-        'page': HistoryPage(),
+        'page': const HistoryPage(),
       },
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home Dashboard'),
+        backgroundColor: Colors.deepPurple.shade50,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Home Dashboard',
+              style: TextStyle(color: Colors.black, fontSize: 18),
+            ),
+            Text(
+              _isGettingLocation ? 'Mendeteksi lokasi...' : _locationName,
+              style: const TextStyle(fontSize: 14, color: Colors.deepPurple),
+            ),
+          ],
+        ),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
+          IconButton(onPressed: _getUserLocation, icon: const Icon(Icons.my_location)),
         ],
       ),
       body: SingleChildScrollView(
@@ -39,27 +127,20 @@ class HomeTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hello...
             Text(
-              'Hello, ${user.username}!',
+              'Hello, ${widget.user.username}!',
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-
-            // Gambar dengan Kutipan
             _buildQuoteCard(),
             const SizedBox(height: 30),
-
             const Text(
               'Fitur Utama Proyek',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Divider(),
-
-            // 4 Menu Utama dalam Grid
             GridView.builder(
-              physics:
-                  const NeverScrollableScrollPhysics(), // Menonaktifkan scroll GridView
+              physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -91,9 +172,7 @@ class HomeTab extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           image: const DecorationImage(
-            image: AssetImage(
-              'assets/hotel_bg.jpg',
-            ), // Ganti dengan path gambar Anda
+            image: AssetImage('assets/hotel_bg.jpg'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
           ),
@@ -117,11 +196,7 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildMenuItemCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Widget page,
-  ) {
+      BuildContext context, String title, IconData icon, Widget page) {
     return InkWell(
       onTap: () {
         Navigator.push(context, MaterialPageRoute(builder: (_) => page));
