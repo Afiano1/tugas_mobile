@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:permission_handler/permission_handler.dart'; // ✅ Tambahan penting
+import 'package:permission_handler/permission_handler.dart';
 import '../models/booking_model.dart';
 import '../db/hive_manager.dart';
 import '../main.dart';
@@ -11,32 +11,52 @@ class BookingDetailPage extends StatelessWidget {
 
   const BookingDetailPage({super.key, required this.booking});
 
+  static const Color primaryColor = Color(0xFF556B2F);
+  static const Color accentColor = Color(0xFF8FA31E);
+  static const Color lightGreen = Color(0xFFC6D870);
+  static const Color softCream = Color(0xFFEFF5D2);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail Pemesanan')),
+      backgroundColor: softCream,
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        title: const Text(
+          'Detail Pemesanan',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               booking.hotelName,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
             ),
+            const SizedBox(height: 16),
+            const Divider(thickness: 1.2, color: lightGreen),
             const SizedBox(height: 10),
-            const Divider(),
+
             _infoRow('📅 Check-in', booking.checkInDate),
             _infoRow('💰 Harga', booking.finalPrice),
             _infoRow('⏰ Booking', '${booking.bookingTime} (WIB)'),
+
             const Spacer(),
 
             // 🔹 Tombol Check-in
             Center(
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  // ✅ Cek izin sebelum menjadwalkan notifikasi
-                  final alarmStatus = await Permission.scheduleExactAlarm.status;
+                  final alarmStatus =
+                      await Permission.scheduleExactAlarm.status;
                   final notifStatus = await Permission.notification.status;
 
                   if (!alarmStatus.isGranted) {
@@ -46,13 +66,22 @@ class BookingDetailPage extends StatelessWidget {
                     await Permission.notification.request();
                   }
 
-                  // 🔹 Konfirmasi user
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('Konfirmasi Check-in'),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Text(
+                        'Konfirmasi Check-in',
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       content: const Text(
-                          'Apakah Anda yakin telah melakukan check-in di hotel ini?'),
+                        'Apakah Anda yakin telah melakukan check-in di hotel ini?',
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
@@ -61,8 +90,15 @@ class BookingDetailPage extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () => Navigator.pop(ctx, true),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
+                            backgroundColor: accentColor,
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           child: const Text('Ya, Sudah Check-in'),
                         ),
@@ -72,7 +108,6 @@ class BookingDetailPage extends StatelessWidget {
 
                   if (confirm != true) return;
 
-                  // 🔹 Hapus data dari Hive
                   final box = HiveManager.bookingBox;
                   final key = box.keys.firstWhere(
                     (k) => box.get(k) == booking,
@@ -80,7 +115,6 @@ class BookingDetailPage extends StatelessWidget {
                   );
                   if (key != null) await box.delete(key);
 
-                  // 🔹 Siapkan notifikasi
                   const androidDetails = AndroidNotificationDetails(
                     'checkin_channel',
                     'Check-in Notifications',
@@ -93,21 +127,20 @@ class BookingDetailPage extends StatelessWidget {
                     android: androidDetails,
                   );
 
-                  // 🔹 Jadwalkan notifikasi dengan fallback
                   try {
                     await flutterLocalNotificationsPlugin.zonedSchedule(
                       1,
                       'Check-in Berhasil!',
                       'Anda telah melakukan check-in di hotel ${booking.hotelName}. Selamat menikmati masa inap Anda 🏨',
-                      tz.TZDateTime.now(tz.local)
-                          .add(const Duration(seconds: 10)),// notifikasi 10 detik kemudian
+                      tz.TZDateTime.now(
+                        tz.local,
+                      ).add(const Duration(seconds: 10)),
                       notifDetails,
                       uiLocalNotificationDateInterpretation:
                           UILocalNotificationDateInterpretation.absoluteTime,
                       androidAllowWhileIdle: true,
                     );
                   } catch (e) {
-                    // fallback: tampilkan langsung jika izin exact alarm ditolak
                     await flutterLocalNotificationsPlugin.show(
                       1,
                       'Check-in Berhasil!',
@@ -116,12 +149,12 @@ class BookingDetailPage extends StatelessWidget {
                     );
                   }
 
-                  // 🔹 Snackbar konfirmasi
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                            'Check-in dikonfirmasi! Selamat menikmati masa inap Anda.'),
+                          'Check-in dikonfirmasi! Selamat menikmati masa inap Anda.',
+                        ),
                       ),
                     );
                     Navigator.pop(context);
@@ -130,13 +163,17 @@ class BookingDetailPage extends StatelessWidget {
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('Check-in Telah Dilakukan'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: accentColor,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
                   ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  elevation: 3,
+                  shadowColor: primaryColor.withOpacity(0.3),
                 ),
               ),
             ),
@@ -156,15 +193,18 @@ class BookingDetailPage extends StatelessWidget {
             flex: 3,
             child: Text(
               label,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: primaryColor,
+              ),
             ),
           ),
           Expanded(
             flex: 5,
             child: Text(
               value.isNotEmpty ? value : '-',
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
             ),
           ),
         ],

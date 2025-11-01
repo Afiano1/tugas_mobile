@@ -16,10 +16,14 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
   bool _isLoading = false;
   String _errorMessage = '';
 
+  static const Color primaryColor = Color(0xFF556B2F);
+  static const Color accentColor = Color(0xFF8FA31E);
+  static const Color softCream = Color(0xFFEFF5D2);
+
   @override
   void initState() {
     super.initState();
-    _fetchHotels("Indonesia"); // tampilkan default
+    _fetchHotels("Indonesia"); // default load
   }
 
   Future<void> _fetchHotels(String query) async {
@@ -43,21 +47,15 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
       '&check_out_date=$checkOutStr'
       '&adults=2'
       '&currency=USD'
-      '&gl=us'
       '&hl=en'
       '&api_key=20949c48851c8330357e4897bd7c08811ef4d73cd41b1b9768ff71cf5f05a807',
     );
 
     try {
       final response = await http.get(url);
-      print('📡 URL: $url');
-      print('📦 BODY: ${response.body.substring(0, 500)}...'); // limit print
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final results =
-            (data['properties'] ?? data['search_results']) as List<dynamic>?;
-
+        final results = (data['properties'] ?? data['search_results']) as List?;
         if (results == null || results.isEmpty) {
           setState(() => _errorMessage = 'Tidak ada hotel ditemukan.');
         } else {
@@ -66,13 +64,10 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
           });
         }
       } else {
-        setState(
-          () => _errorMessage =
-              'Gagal memuat hotel. Code: ${response.statusCode}',
-        );
+        _errorMessage = 'Gagal memuat data. Code: ${response.statusCode}';
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Terjadi kesalahan: $e');
+      _errorMessage = 'Kesalahan jaringan: $e';
     } finally {
       setState(() => _isLoading = false);
     }
@@ -81,79 +76,114 @@ class _HotelSearchPageState extends State<HotelSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cari Hotel (SerpAPI)')),
+      backgroundColor: softCream,
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        title: const Text('Cari Hotel',
+            style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Cari Hotel (misal: "Bali" atau "Jakarta")',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    final query = _searchController.text.trim();
-                    _fetchHotels(query.isEmpty ? "Indonesia" : query);
-                  },
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Cari Hotel (misal: "Bali" atau "Jakarta")',
+                  border: InputBorder.none,
+                  prefixIcon: const Icon(Icons.search, color: primaryColor),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios,
+                        color: accentColor),
+                    onPressed: () {
+                      final query = _searchController.text.trim();
+                      _fetchHotels(query.isEmpty ? "Indonesia" : query);
+                    },
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             if (_isLoading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
+              const Expanded(
+                  child: Center(child: CircularProgressIndicator()))
             else if (_errorMessage.isNotEmpty)
               Expanded(
-                child: Center(
-                  child: Text(
-                    _errorMessage,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-              )
-            else if (_hotels.isEmpty)
-              const Expanded(
-                child: Center(child: Text("Belum ada data hotel.")),
-              )
+                  child: Center(
+                      child: Text(_errorMessage,
+                          style: const TextStyle(color: Colors.red))))
             else
               Expanded(
                 child: ListView.builder(
                   itemCount: _hotels.length,
                   itemBuilder: (context, index) {
                     final hotel = _hotels[index];
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.symmetric(vertical: 8),
-                      elevation: 3,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.1),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
                       child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
                         leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                           child: Image.network(
                             hotel.imageUrl,
                             width: 80,
                             height: 80,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.broken_image, size: 50),
+                            errorBuilder: (c, e, s) => const Icon(
+                                Icons.broken_image,
+                                color: Colors.grey),
                           ),
                         ),
                         title: Text(
                           hotel.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(hotel.address),
-                            Text(
-                              '⭐ ${hotel.rating.toString()}',
-                              style: const TextStyle(color: Colors.orange),
+                            Text(hotel.address,
+                                style: const TextStyle(fontSize: 12)),
+                            Row(
+                              children: [
+                                const Icon(Icons.star,
+                                    color: Colors.orange, size: 16),
+                                Text(' ${hotel.rating.toStringAsFixed(2)}'),
+                              ],
                             ),
                             Text(
                               hotel.priceText,
                               style: const TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                  color: accentColor,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
