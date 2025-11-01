@@ -3,7 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../models/user_model.dart';
 import 'hotel_search_page.dart';
-import 'history_page.dart';
+import 'history_page.dart'; // pastikan file ini ada dan berisi class HistoryPage
 
 class HomeTab extends StatefulWidget {
   final UserModel user;
@@ -23,7 +23,7 @@ class _HomeTabState extends State<HomeTab> {
     _getUserLocation();
   }
 
-  /// ✅ Ambil lokasi pengguna dan konversi ke nama tempat
+  /// 🔹 Ambil lokasi pengguna dan ubah ke nama tempat
   Future<void> _getUserLocation() async {
     setState(() => _isGettingLocation = true);
 
@@ -64,8 +64,11 @@ class _HomeTabState extends State<HomeTab> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Konversi ke nama lokasi (kecamatan / kota)
-      final placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+      // Konversi ke nama kota / kecamatan
+      final placemarks = await placemarkFromCoordinates(
+        pos.latitude,
+        pos.longitude,
+      );
 
       String finalText = 'Lokasi tidak diketahui';
       if (placemarks.isNotEmpty) {
@@ -89,6 +92,7 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
+    // 🔹 Daftar menu utama
     final List<Map<String, dynamic>> menuItems = [
       {
         'title': 'Cek Hotel & Booking',
@@ -98,7 +102,7 @@ class _HomeTabState extends State<HomeTab> {
       {
         'title': 'Riwayat Pemesanan',
         'icon': Icons.history,
-        'page': const HistoryPage(),
+        'page': const Historyage(), // ✅ class sudah diperbaiki di history_page.dart
       },
     ];
 
@@ -119,7 +123,11 @@ class _HomeTabState extends State<HomeTab> {
           ],
         ),
         actions: [
-          IconButton(onPressed: _getUserLocation, icon: const Icon(Icons.my_location)),
+          IconButton(
+            onPressed: _getUserLocation,
+            icon: const Icon(Icons.my_location),
+            tooltip: 'Perbarui Lokasi',
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -129,20 +137,25 @@ class _HomeTabState extends State<HomeTab> {
           children: [
             Text(
               'Hello, ${widget.user.username}!',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style:
+                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
+
             _buildQuoteCard(),
             const SizedBox(height: 30),
+
             const Text(
               'Fitur Utama Proyek',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Divider(),
+
             GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
@@ -150,11 +163,12 @@ class _HomeTabState extends State<HomeTab> {
               ),
               itemCount: menuItems.length,
               itemBuilder: (context, index) {
+                final item = menuItems[index];
                 return _buildMenuItemCard(
                   context,
-                  menuItems[index]['title'] as String,
-                  menuItems[index]['icon'] as IconData,
-                  menuItems[index]['page'] as Widget,
+                  item['title'] as String,
+                  item['icon'] as IconData,
+                  item['page'] as Widget,
                 );
               },
             ),
@@ -164,6 +178,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  /// 🔹 Kartu kutipan
   Widget _buildQuoteCard() {
     return Card(
       elevation: 4,
@@ -195,6 +210,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  /// 🔹 Kartu menu utama
   Widget _buildMenuItemCard(
       BuildContext context, String title, IconData icon, Widget page) {
     return InkWell(
@@ -203,6 +219,8 @@ class _HomeTabState extends State<HomeTab> {
       },
       child: Card(
         elevation: 3,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

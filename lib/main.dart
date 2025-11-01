@@ -13,6 +13,7 @@ import 'pages/hotel_detail_page.dart';
 import 'screen/main_screen.dart';
 import 'models/hotel_model.dart';
 
+
 // 🔔 Global notifikasi plugin
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
