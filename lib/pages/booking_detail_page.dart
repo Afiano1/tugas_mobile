@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart'; // ✅ Tambahan penting
 import '../models/booking_model.dart';
 import '../db/hive_manager.dart';
 import '../main.dart';
@@ -25,7 +26,6 @@ class BookingDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Divider(),
-            _infoRow('🏨 Platform', booking.platform),
             _infoRow('📅 Check-in', booking.checkInDate),
             _infoRow('💰 Harga', booking.finalPrice),
             _infoRow('⏰ Booking', '${booking.bookingTime} (WIB)'),
@@ -35,14 +35,24 @@ class BookingDetailPage extends StatelessWidget {
             Center(
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  // Konfirmasi dulu
+                  // ✅ Cek izin sebelum menjadwalkan notifikasi
+                  final alarmStatus = await Permission.scheduleExactAlarm.status;
+                  final notifStatus = await Permission.notification.status;
+
+                  if (!alarmStatus.isGranted) {
+                    await Permission.scheduleExactAlarm.request();
+                  }
+                  if (!notifStatus.isGranted) {
+                    await Permission.notification.request();
+                  }
+
+                  // 🔹 Konfirmasi user
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Konfirmasi Check-in'),
                       content: const Text(
-                        'Apakah Anda yakin telah melakukan check-in di hotel ini?',
-                      ),
+                          'Apakah Anda yakin telah melakukan check-in di hotel ini?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
@@ -62,7 +72,7 @@ class BookingDetailPage extends StatelessWidget {
 
                   if (confirm != true) return;
 
-                  // 🔹 Hapus dari Hive
+                  // 🔹 Hapus data dari Hive
                   final box = HiveManager.bookingBox;
                   final key = box.keys.firstWhere(
                     (k) => box.get(k) == booking,
@@ -70,7 +80,7 @@ class BookingDetailPage extends StatelessWidget {
                   );
                   if (key != null) await box.delete(key);
 
-                  // 🔹 Jadwalkan notifikasi 30 detik kemudian
+                  // 🔹 Siapkan notifikasi
                   const androidDetails = AndroidNotificationDetails(
                     'checkin_channel',
                     'Check-in Notifications',
@@ -83,26 +93,35 @@ class BookingDetailPage extends StatelessWidget {
                     android: androidDetails,
                   );
 
-                  await flutterLocalNotificationsPlugin.zonedSchedule(
-                    1,
-                    'Check-in Berhasil!',
-                    'Anda telah melakukan check-in di hotel ${booking.hotelName}. Selamat menikmati masa inap Anda 🏨',
-                    tz.TZDateTime.now(
-                      tz.local,
-                    ).add(const Duration(seconds: 30)),
-                    notifDetails,
-                    uiLocalNotificationDateInterpretation:
-                        UILocalNotificationDateInterpretation.absoluteTime,
-                    androidAllowWhileIdle: true,
-                  );
+                  // 🔹 Jadwalkan notifikasi dengan fallback
+                  try {
+                    await flutterLocalNotificationsPlugin.zonedSchedule(
+                      1,
+                      'Check-in Berhasil!',
+                      'Anda telah melakukan check-in di hotel ${booking.hotelName}. Selamat menikmati masa inap Anda 🏨',
+                      tz.TZDateTime.now(tz.local)
+                          .add(const Duration(seconds: 10)),// notifikasi 10 detik kemudian
+                      notifDetails,
+                      uiLocalNotificationDateInterpretation:
+                          UILocalNotificationDateInterpretation.absoluteTime,
+                      androidAllowWhileIdle: true,
+                    );
+                  } catch (e) {
+                    // fallback: tampilkan langsung jika izin exact alarm ditolak
+                    await flutterLocalNotificationsPlugin.show(
+                      1,
+                      'Check-in Berhasil!',
+                      'Anda telah melakukan check-in di hotel ${booking.hotelName}. Selamat menikmati masa inap Anda 🏨',
+                      notifDetails,
+                    );
+                  }
 
-                  // 🔹 Tampilkan snackbar
+                  // 🔹 Snackbar konfirmasi
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Check-in dikonfirmasi! Notifikasi akan muncul dalam 30 detik.',
-                        ),
+                            'Check-in dikonfirmasi! Selamat menikmati masa inap Anda.'),
                       ),
                     );
                     Navigator.pop(context);
@@ -113,10 +132,8 @@ class BookingDetailPage extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -139,7 +156,8 @@ class BookingDetailPage extends StatelessWidget {
             flex: 3,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
           Expanded(

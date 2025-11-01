@@ -42,7 +42,6 @@ class HistoryPage extends StatelessWidget {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Platform: ${item.platform}'),
                       Text('Tgl Check-in: ${item.checkInDate}'),
                       Text('Harga: ${item.finalPrice}'),
                       Text('Waktu Booking: ${item.bookingTime} (WIB)'),
