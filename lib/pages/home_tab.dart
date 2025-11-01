@@ -102,7 +102,7 @@ class _HomeTabState extends State<HomeTab> {
       {
         'title': 'Riwayat Pemesanan',
         'icon': Icons.history,
-        'page': const Historyage(), // ✅ class sudah diperbaiki di history_page.dart
+        'page': const HistorPage(), // ✅ class sudah diperbaiki di history_page.dart
       },
     ];
 
