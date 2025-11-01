@@ -1,23 +1,20 @@
-shrinkResourcesplugins {
+plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // Flutter Gradle Plugin harus selalu diletakkan terakhir
+    // Flutter Gradle Plugin harus diletakkan setelah Android dan Kotlin
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.projek_mobile_teori1"
-
-    // Gunakan compileSdk minimal 33 agar image_picker dan kamera berfungsi
     compileSdk = 36
-    ndkVersion = flutter.ndkVersion
 
     defaultConfig {
         applicationId = "com.example.projek_mobile_teori1"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 1
+        versionName = "1.0"
     }
 
     compileOptions {
@@ -30,24 +27,19 @@ android {
         jvmTarget = "17"
     }
 
-    kotlin {
-        jvmToolchain(17)
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
 
-buildTypes {
-    getByName("release") {
-        isMinifyEnabled = true       // aktifkan R8 shrinker
-        isShrinkResources = true     // hanya boleh aktif kalau R8 aktif
-        proguardFiles(
-            getDefaultProguardFile("proguard-android-optimize.txt"),
-            "proguard-rules.pro"
-        )
-        signingConfig = signingConfigs.getByName("debug")
-    }
-}
-
-
-    // ✅ Aktifkan viewBinding untuk plugin seperti image_picker, camera, dll
+    // aktifkan viewBinding
     buildFeatures {
         viewBinding = true
     }
@@ -59,10 +51,9 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
-
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    // ✅ Tambahkan dependensi AndroidX modern (dibutuhkan oleh image_picker)
+    // Tambahan library AndroidX
     implementation("androidx.activity:activity:1.8.0")
     implementation("androidx.fragment:fragment:1.6.1")
 }

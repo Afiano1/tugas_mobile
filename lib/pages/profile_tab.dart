@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'login_page.dart';
@@ -16,7 +13,6 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  File? _profileImage;
   String? _username;
 
   @override
@@ -28,7 +24,7 @@ class _ProfileTabState extends State<ProfileTab> {
   // Fungsi Logout
   void _logout(BuildContext context) async {
     await AuthService.logout();
-    if (!mounted) return; // hindari context error
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -36,64 +32,18 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  // Fungsi Edit Profil dengan error handling aman
+  // Fungsi Edit Nama Profil
   void _editProfile(BuildContext context) async {
-    final TextEditingController nameController = TextEditingController(
-      text: _username,
-    );
+    final TextEditingController nameController =
+        TextEditingController(text: _username);
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Edit Profil'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Nama'),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    final ImagePicker picker = ImagePicker();
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.gallery,
-                    );
-
-                    if (image != null) {
-                      setState(() {
-                        _profileImage = File(image.path);
-                      });
-                    } else {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Tidak ada gambar yang dipilih'),
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    debugPrint("Error picking image: $e");
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Gagal membuka galeri, coba lagi nanti.',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.image),
-                label: const Text('Pilih Gambar'),
-              ),
-            ],
-          ),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(labelText: 'Nama'),
         ),
         actions: [
           TextButton(
@@ -123,16 +73,18 @@ class _ProfileTabState extends State<ProfileTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Foto profil + tombol edit
+            // Foto profil diganti ikon orang
             Stack(
               alignment: Alignment.bottomRight,
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 50,
-                  backgroundImage: _profileImage != null
-                      ? FileImage(_profileImage!)
-                      : const NetworkImage('https://i.pravatar.cc/150?img=1')
-                            as ImageProvider,
+                  backgroundColor: Colors.purpleAccent,
+                  child: Icon(
+                    Icons.person,
+                    size: 70,
+                    color: Colors.white,
+                  ),
                 ),
                 Positioned(
                   bottom: 0,

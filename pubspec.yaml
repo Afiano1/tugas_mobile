@@ -30,7 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  image_picker: ^1.1.1
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   crypto: ^3.0.3 # Untuk enkripsi SHA256
