@@ -52,8 +52,8 @@ class _AboutUsPageState extends State<AboutUsPage> {
             Center(
               child: CircleAvatar(
                 radius: 60,
-                backgroundColor: accentColor,
-                backgroundImage: AssetImage('assets/images/p.jpg'),
+                backgroundColor: Colors.grey[300],
+                backgroundImage: const AssetImage('assets/images/aku.png'),
               ),
             ),
             const SizedBox(height: 15),

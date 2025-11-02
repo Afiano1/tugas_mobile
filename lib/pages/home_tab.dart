@@ -306,17 +306,38 @@ class _HomeTabState extends State<HomeTab> {
 
   /// 🔹 Kartu menu utama
   Widget _buildFeatureCard(IconData icon, String title, VoidCallback onTap) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
+    const primaryColor = Color(0xFF556B2F);
+    const backgroundColor = Color(0xFFEFF5D2);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color:
+              backgroundColor, // 💚 pakai warna palet kamu, bukan warna putih
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: const Color(0xFF556B2F)),
+            Icon(icon, size: 38, color: primaryColor),
             const SizedBox(height: 8),
-            Text(title, textAlign: TextAlign.center),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: primaryColor,
+              ),
+            ),
           ],
         ),
       ),

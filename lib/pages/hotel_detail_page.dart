@@ -241,7 +241,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
 
               // 💱 Konversi Mata Uang
               const Text(
-                '💰 Konversi Mata Uang',
+                'Melihat dalam Mata Uang lain : ',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -274,7 +274,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
 
               // 📅 Pilih tanggal
               const Text(
-                '📅 Pilih Tanggal Pemesanan',
+                'Pilih Tanggal cek in & cek out : ',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -326,7 +326,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
 
               // ⏰ Pilih jam
               const Text(
-                '⏰ Pilih Jam Check-in',
+                'Pilih Jam Check-in :',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
@@ -351,7 +351,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
 
               // 🌍 Konversi Waktu
               const Text(
-                '🌍 Konversi Waktu',
+                'Melihat dari zona Waktu lain : ',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
