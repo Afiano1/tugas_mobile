@@ -2,7 +2,7 @@ import 'package:hive/hive.dart';
 
 part 'booking_model.g.dart';
 
-@HiveType(typeId: 1) // TypeId harus unik, pakai 1
+@HiveType(typeId: 1)
 class BookingModel extends HiveObject {
   @HiveField(0)
   final String hotelName;
@@ -15,11 +15,16 @@ class BookingModel extends HiveObject {
   @HiveField(4)
   final String finalPrice;
 
+  // 🆕 Tambahkan ini untuk filter per user
+  @HiveField(5)
+  final String userEmail;
+
   BookingModel({
     required this.hotelName,
     required this.platform,
     required this.checkInDate,
     required this.bookingTime,
     required this.finalPrice,
+    required this.userEmail,
   });
 }

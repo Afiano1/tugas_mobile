@@ -25,8 +25,6 @@ class HiveManager {
     try {
       userBox = await Hive.openBox<UserModel>('users');
     } catch (e) {
-      // Jika terjadi error type cast (karena struktur model berubah),
-      // hapus box lama lalu buka ulang
       print("⚠️ Terjadi error saat membuka box 'users': $e");
       await Hive.deleteBoxFromDisk('users');
       userBox = await Hive.openBox<UserModel>('users');
@@ -51,6 +49,26 @@ class HiveManager {
       await Hive.deleteBoxFromDisk('bookings');
       bookingBox = await Hive.openBox<BookingModel>('bookings');
       print("✅ Box 'bookings' lama dihapus dan dibuat ulang.");
+    }
+
+    // =====================================================
+    // 🧩 CEK STRUKTUR BARU (userEmail)
+    // =====================================================
+    try {
+      // Jika field userEmail belum ada di data lama → reset box
+      final firstBooking = bookingBox.values.isNotEmpty ? bookingBox.values.first : null;
+      if (firstBooking != null && (firstBooking as dynamic).userEmail == null) {
+        print("🚨 Deteksi struktur lama tanpa 'userEmail'. Melakukan reset box...");
+        await Hive.deleteBoxFromDisk('bookings');
+        bookingBox = await Hive.openBox<BookingModel>('bookings');
+        print("✅ Struktur 'bookings' diperbarui dengan field userEmail.");
+      }
+    } catch (e) {
+      // Jika error saat akses field → anggap struktur lama dan reset box
+      print("⚠️ Error saat verifikasi struktur 'bookings': $e");
+      await Hive.deleteBoxFromDisk('bookings');
+      bookingBox = await Hive.openBox<BookingModel>('bookings');
+      print("✅ Box 'bookings' lama dihapus dan dibuat ulang (struktur diperbarui).");
     }
   }
 

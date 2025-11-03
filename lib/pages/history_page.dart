@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../db/hive_manager.dart';
 import '../models/booking_model.dart';
+import '../services/auth_service.dart';
 import 'booking_detail_page.dart';
 
 class HistoryPage extends StatelessWidget {
@@ -14,6 +15,9 @@ class HistoryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = AuthService.getCurrentUser();
+    final currentEmail = currentUser?.email ?? '';
+
     return Scaffold(
       backgroundColor: softCream,
       appBar: AppBar(
@@ -28,7 +32,15 @@ class HistoryPage extends StatelessWidget {
       body: ValueListenableBuilder<Box<BookingModel>>(
         valueListenable: HiveManager.bookingBox.listenable(),
         builder: (context, box, _) {
-          final history = box.values.toList().cast<BookingModel>().reversed.toList();
+          // 🧩 Ambil semua booking
+          final allHistory = box.values.toList().cast<BookingModel>();
+
+          // 🧹 Filter hanya milik user login sekarang
+          final history = allHistory
+              .where((item) => item.userEmail == currentEmail)
+              .toList()
+              .reversed
+              .toList();
 
           if (history.isEmpty) {
             return const Center(
@@ -38,7 +50,7 @@ class HistoryPage extends StatelessWidget {
                   Icon(Icons.history, size: 70, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
-                    'Belum ada riwayat pemesanan.',
+                    'Belum ada riwayat pemesanan untuk akun ini.',
                     style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 ],

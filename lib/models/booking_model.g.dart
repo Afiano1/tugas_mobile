@@ -22,13 +22,14 @@ class BookingModelAdapter extends TypeAdapter<BookingModel> {
       checkInDate: fields[2] as String,
       bookingTime: fields[3] as String,
       finalPrice: fields[4] as String,
+      userEmail: fields[5] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, BookingModel obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.hotelName)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class BookingModelAdapter extends TypeAdapter<BookingModel> {
       ..writeByte(3)
       ..write(obj.bookingTime)
       ..writeByte(4)
-      ..write(obj.finalPrice);
+      ..write(obj.finalPrice)
+      ..writeByte(5)
+      ..write(obj.userEmail);
   }
 
   @override
