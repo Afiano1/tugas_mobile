@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:timezone/timezone.dart' as tz;
+
 import '../models/booking_model.dart';
 import '../db/hive_manager.dart';
-import '../main.dart';
-import 'package:timezone/timezone.dart' as tz;
+import '../main.dart'; // ⬅️ penting agar bisa akses flutterLocalNotificationsPlugin
 
 class BookingDetailPage extends StatelessWidget {
   final BookingModel booking;
@@ -44,17 +45,16 @@ class BookingDetailPage extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(thickness: 1.2, color: lightGreen),
             const SizedBox(height: 10),
-
             _infoRow('📅 Check-in', booking.checkInDate),
             _infoRow('💰 Harga', booking.finalPrice),
             _infoRow('⏰ Booking', '${booking.bookingTime} (WIB)'),
-
             const Spacer(),
 
             // 🔹 Tombol Check-in
             Center(
               child: ElevatedButton.icon(
                 onPressed: () async {
+                  // ✅ Minta izin jika belum ada
                   final alarmStatus =
                       await Permission.scheduleExactAlarm.status;
                   final notifStatus = await Permission.notification.status;
@@ -66,6 +66,7 @@ class BookingDetailPage extends StatelessWidget {
                     await Permission.notification.request();
                   }
 
+                  // ✅ Konfirmasi user
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -108,6 +109,7 @@ class BookingDetailPage extends StatelessWidget {
 
                   if (confirm != true) return;
 
+                  // ✅ Hapus data dari Hive
                   final box = HiveManager.bookingBox;
                   final key = box.keys.firstWhere(
                     (k) => box.get(k) == booking,
@@ -115,9 +117,10 @@ class BookingDetailPage extends StatelessWidget {
                   );
                   if (key != null) await box.delete(key);
 
+                  // ✅ Buat notifikasi
                   const androidDetails = AndroidNotificationDetails(
-                    'checkin_channel',
-                    'Check-in Notifications',
+                    'booking_channel',
+                    'Booking Notifications',
                     channelDescription: 'Notifikasi setelah check-in dilakukan',
                     importance: Importance.max,
                     priority: Priority.high,
@@ -149,6 +152,7 @@ class BookingDetailPage extends StatelessWidget {
                     );
                   }
 
+                  // ✅ Pesan sukses
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

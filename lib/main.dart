@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:permission_handler/permission_handler.dart'; // ✅ Untuk izin notifikasi
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // ✅ Perbaikan import (tanpa alias)
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:timezone/data/latest.dart' as tz;
+
 import 'db/hive_manager.dart';
 import 'models/user_model.dart';
+import 'models/hotel_model.dart';
 import 'services/auth_service.dart';
 import 'pages/login_page.dart';
 import 'pages/hotel_search_page.dart';
 import 'pages/hotel_detail_page.dart';
 import 'screen/main_screen.dart';
-import 'models/hotel_model.dart';
 
-
-// 🔔 Global notifikasi plugin
+// 🔔 Global notifikasi plugin (harus bisa diakses dari file lain)
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
@@ -39,7 +39,8 @@ Future<void> _initializeNotifications() async {
 
   final androidPlugin = flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+        AndroidFlutterLocalNotificationsPlugin
+      >();
 
   // ✅ Buat channel jika belum ada
   await androidPlugin?.createNotificationChannel(androidChannel);
@@ -65,7 +66,7 @@ Future<void> main() async {
   // ✅ Muat variabel lingkungan dari file .env
   await dotenv.load(fileName: ".env");
 
-  // ✅ Inisialisasi Hive & database lokal
+  // ✅ Inisialisasi Hive
   await Hive.initFlutter();
   await HiveManager.init();
 
@@ -73,7 +74,7 @@ Future<void> main() async {
   tz.initializeTimeZones();
   await _initializeNotifications();
 
-  // ✅ Tentukan halaman awal (login atau dashboard)
+  // ✅ Tentukan halaman awal
   final initialPage = await _getInitialPage();
 
   runApp(MyApp(initialPage: initialPage));
@@ -88,11 +89,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Hive Login Demo',
+      title: 'Hotel Booking App',
       theme: ThemeData(primarySwatch: Colors.deepPurple),
       home: initialPage,
+
+      // ✅ Tambahkan definisi routes di sini
       routes: {
         '/hotel_search': (context) => const HotelSearchPage(),
+
+        // ✅ Rute untuk halaman detail hotel
         '/hotel_detail': (context) {
           final hotel =
               ModalRoute.of(context)!.settings.arguments as HotelModel;

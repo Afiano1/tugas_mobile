@@ -23,30 +23,34 @@ class _MainScreenState extends State<MainScreen>
   void initState() {
     super.initState();
 
-    // Inisialisasi halaman
+    // ✅ Inisialisasi halaman
     _widgetOptions = [
       HomeTab(user: widget.user),
       ProfileTab(user: widget.user),
     ];
 
-    // Inisialisasi animasi
+    // ✅ Inisialisasi controller animasi
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+
+    // ✅ Inisialisasi fade animation
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
     );
 
-    // 🟢 Jalankan animasi awal supaya halaman pertama langsung tampil
+    // ✅ Jalankan animasi pertama kali
     _controller.forward();
   }
 
   void _onItemTapped(int index) async {
     if (index != _selectedIndex) {
+      // Jalankan animasi fade out dulu
       await _controller.reverse();
       setState(() => _selectedIndex = index);
+      // Lalu fade in lagi halaman baru
       await _controller.forward();
     }
   }
@@ -71,7 +75,7 @@ class _MainScreenState extends State<MainScreen>
         child: _widgetOptions[_selectedIndex],
       ),
 
-      // 🔹 Bottom Navigation Bar yang elegan
+      // 🔹 Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
