@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tzdata;
 
 import '../models/booking_model.dart';
 import '../db/hive_manager.dart';
-import '../main.dart'; // ⬅️ penting agar bisa akses flutterLocalNotificationsPlugin
+import '../main.dart'; // untuk akses flutterLocalNotificationsPlugin
 
 class BookingDetailPage extends StatelessWidget {
   final BookingModel booking;
@@ -55,15 +56,20 @@ class BookingDetailPage extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   // ✅ Minta izin jika belum ada
-                  final alarmStatus =
-                      await Permission.scheduleExactAlarm.status;
-                  final notifStatus = await Permission.notification.status;
+                  final notifPermission = await Permission.notification
+                      .request();
+                  final alarmPermission = await Permission.scheduleExactAlarm
+                      .request();
 
-                  if (!alarmStatus.isGranted) {
-                    await Permission.scheduleExactAlarm.request();
-                  }
-                  if (!notifStatus.isGranted) {
-                    await Permission.notification.request();
+                  if (!notifPermission.isGranted ||
+                      !alarmPermission.isGranted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('⚠️ Izin notifikasi belum diberikan.'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
                   }
 
                   // ✅ Konfirmasi user
@@ -117,48 +123,91 @@ class BookingDetailPage extends StatelessWidget {
                   );
                   if (key != null) await box.delete(key);
 
-                  // ✅ Buat notifikasi
-                  const androidDetails = AndroidNotificationDetails(
-                    'booking_channel',
-                    'Booking Notifications',
-                    channelDescription: 'Notifikasi setelah check-in dilakukan',
+                  // =====================================================
+                  // 🔔 NOTIFIKASI INTERNAL (langsung muncul)
+                  // =====================================================
+                  const internalAndroid = AndroidNotificationDetails(
+                    'internal_checkin_channel',
+                    'Internal Notifications',
+                    channelDescription: 'Notifikasi langsung check-in',
                     importance: Importance.max,
                     priority: Priority.high,
+                    color: accentColor,
+                    styleInformation: BigTextStyleInformation(
+                      'Terima kasih banyak! Selamat atas check-in nya 🎉',
+                      contentTitle: '✅ Check-in Berhasil!',
+                      htmlFormatBigText: true,
+                      htmlFormatContentTitle: true,
+                    ),
+                  );
+                  const internalNotif = NotificationDetails(
+                    android: internalAndroid,
+                  );
+
+                  await flutterLocalNotificationsPlugin.show(
+                    0,
+                    '✅ Check-in Berhasil!',
+                    'Terima kasih banyak! Selamat atas check-in nya 🎉',
+                    internalNotif,
+                  );
+
+                  // =====================================================
+                  // 🔔 NOTIFIKASI EKSTERNAL (1 MENIT KEMUDIAN)
+                  // =====================================================
+                  tzdata.initializeTimeZones();
+                  tz.setLocalLocation(
+                    tz.getLocation('Asia/Jakarta'),
+                  ); // Lokal saja
+                  final scheduleTime = tz.TZDateTime.now(
+                    tz.local,
+                  ).add(const Duration(minutes: 1));
+
+                  const externalAndroid = AndroidNotificationDetails(
+                    'external_checkin_channel',
+                    'External Notifications',
+                    channelDescription: 'Notifikasi eksternal setelah check-in',
+                    importance: Importance.max,
+                    priority: Priority.high,
+                    color: primaryColor,
                     playSound: true,
+                    styleInformation: BigTextStyleInformation(
+                      'Terima kasih banyak! Selamat atas check-in nya 🎉',
+                      contentTitle: '🌿 Check-in Dikonfirmasi!',
+                      htmlFormatBigText: true,
+                      htmlFormatContentTitle: true,
+                    ),
                   );
-                  const notifDetails = NotificationDetails(
-                    android: androidDetails,
+                  const externalNotif = NotificationDetails(
+                    android: externalAndroid,
                   );
 
-                  try {
-                    await flutterLocalNotificationsPlugin.zonedSchedule(
-                      1,
-                      'Check-in Berhasil!',
-                      'Anda telah melakukan check-in di hotel ${booking.hotelName}. Selamat menikmati masa inap Anda 🏨',
-                      tz.TZDateTime.now(
-                        tz.local,
-                      ).add(const Duration(seconds: 10)),
-                      notifDetails,
-                      uiLocalNotificationDateInterpretation:
-                          UILocalNotificationDateInterpretation.absoluteTime,
-                      androidAllowWhileIdle: true,
-                    );
-                  } catch (e) {
-                    await flutterLocalNotificationsPlugin.show(
-                      1,
-                      'Check-in Berhasil!',
-                      'Anda telah melakukan check-in di hotel ${booking.hotelName}. Selamat menikmati masa inap Anda 🏨',
-                      notifDetails,
-                    );
-                  }
+                  await flutterLocalNotificationsPlugin.zonedSchedule(
+                    1,
+                    '🌿 Check-in Dikonfirmasi!',
+                    'Terima kasih banyak! Selamat menikmati libura anda 🎉',
+                    scheduleTime,
+                    externalNotif,
+                    androidAllowWhileIdle: true,
+                    uiLocalNotificationDateInterpretation:
+                        UILocalNotificationDateInterpretation.absoluteTime,
+                    payload: 'checkin_${booking.hotelName}',
+                  );
 
-                  // ✅ Pesan sukses
+                  // =====================================================
+                  // ✅ SnackBar sederhana
+                  // =====================================================
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Check-in dikonfirmasi! Selamat menikmati masa inap Anda.',
+                      SnackBar(
+                        content: const Text(
+                          '✅ Terima kasih banyak! Selamat Menikmati Liburan anda 🎉',
                         ),
+                        backgroundColor: primaryColor,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        margin: const EdgeInsets.all(12),
                       ),
                     );
                     Navigator.pop(context);

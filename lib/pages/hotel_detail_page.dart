@@ -506,25 +506,42 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
 
     await HiveManager.bookingBox.add(booking);
 
+    // ✅ Notifikasi internal sederhana
     const androidDetails = AndroidNotificationDetails(
       'booking_channel',
       'Booking Notifications',
       channelDescription: 'Notifikasi pemesanan hotel',
       importance: Importance.max,
       priority: Priority.high,
+      color: Color(0xFF8FA31E),
+      styleInformation: BigTextStyleInformation(
+        'Booking sukses!',
+        contentTitle: '✅ Booking Sukses!',
+        htmlFormatBigText: true,
+        htmlFormatContentTitle: true,
+      ),
     );
+
     const notifDetails = NotificationDetails(android: androidDetails);
+
     await flutterLocalNotificationsPlugin.show(
       0,
-      'Pemesanan Berhasil!',
-      'Hotel ${hotel.name} telah dipesan.',
+      '✅ Booking Sukses!',
+      'Hotel ${hotel.name} berhasil dipesan!',
       notifDetails,
+      payload: 'hotel_${hotel.name}',
     );
 
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed('/hotel_search');
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pemesanan berhasil disimpan!')),
+      SnackBar(
+        content: const Text('✅ Booking sukses!'),
+        backgroundColor: const Color(0xFF556B2F),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ),
     );
   }
 }

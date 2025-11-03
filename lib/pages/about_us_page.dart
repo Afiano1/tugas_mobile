@@ -1,27 +1,7 @@
 import 'package:flutter/material.dart';
 
-class AboutUsPage extends StatefulWidget {
+class AboutUsPage extends StatelessWidget {
   const AboutUsPage({super.key});
-
-  @override
-  State<AboutUsPage> createState() => _AboutUsPageState();
-}
-
-class _AboutUsPageState extends State<AboutUsPage> {
-  final TextEditingController _kesanController = TextEditingController();
-  final List<String> _listKesan = [];
-
-  void _submitKesan() {
-    if (_kesanController.text.isNotEmpty) {
-      setState(() {
-        _listKesan.add(_kesanController.text);
-        _kesanController.clear();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Terima kasih atas pesan dan kesanmu!')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +91,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
             ),
             const SizedBox(height: 25),
 
-            // 🔹 Kesan dan Pesan
+            // 🔹 Kesan dan Pesan (Statis)
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -123,68 +103,102 @@ class _AboutUsPageState extends State<AboutUsPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _kesanController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Tulis kesan/pesan kamu...',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: lightGreen),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _submitKesan,
-                icon: const Icon(Icons.send, color: Colors.white),
-                label: const Text('Kirim'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
 
-            // 🔹 Daftar Kesan
-            if (_listKesan.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(),
-                  const Text(
-                    'Kesan dan Pesan Terkirim:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _listKesan.length,
-                    itemBuilder: (context, index) => Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.symmetric(vertical: 5),
-                      child: ListTile(
-                        leading: const Icon(Icons.comment, color: primaryColor),
-                        title: Text(_listKesan[index]),
+            // Kesan terhadap Pemrograman Aplikasi Mobile
+            Card(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              elevation: 5,
+              shadowColor: lightGreen.withOpacity(0.5),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.emoji_emotions, color: accentColor, size: 40),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kesan terhadap Pemrograman Aplikasi Mobile',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Mata kuliah ini sangat menyenangkan karena memberikan kesempatan untuk berkreasi dan mengimplementasikan ide secara langsung melalui aplikasi nyata. '
+                            'Selain itu, saya merasa lebih memahami bagaimana aplikasi mobile bekerja dan bagaimana desain UI dapat memengaruhi pengalaman pengguna.',
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(height: 1.5),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ),
+            const SizedBox(height: 15),
+
+            // Pesan terhadap Mata Kuliah
+            Card(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              elevation: 5,
+              shadowColor: lightGreen.withOpacity(0.5),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.message_rounded, color: accentColor, size: 40),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pesan terhadap Mata Kuliah Pemrograman Aplikasi Mobile',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Semoga mata kuliah ini terus dikembangkan dengan materi yang semakin up-to-date dan mendukung mahasiswa untuk lebih memahami tren teknologi terkini. '
+                            'Terima kasih kepada dosen dan asisten yang telah membimbing dengan sabar selama proses pembelajaran.',
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(height: 1.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+            const Text(
+              '🌿 Terima kasih telah membaca! 🌿',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
