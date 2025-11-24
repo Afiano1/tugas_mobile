@@ -39,19 +39,25 @@ class _HomeTabState extends State<HomeTab> {
     super.dispose();
   }
 
-  /// 🔹 Ambil lokasi pengguna
+  /// 🔹 Ambil lokasi pengguna (Logika diperbarui untuk detail yang lebih spesifik)
   Future<void> _getUserLocation() async {
-    setState(() => _isGettingLocation = true);
+    setState(() {
+      _locationName = 'Mendeteksi lokasi...';
+      _isGettingLocation = true;
+    });
+
     try {
+      // Pastikan GPS aktif
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         setState(() {
-          _locationName = 'Layanan lokasi dinonaktifkan';
+          _locationName = 'Layanan lokasi mati';
           _isGettingLocation = false;
         });
         return;
       }
 
+      // Cek permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -72,30 +78,46 @@ class _HomeTabState extends State<HomeTab> {
         return;
       }
 
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+      // Ambil koordinat
+      Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
       );
 
-      final placemarks = await placemarkFromCoordinates(
+      // Convert koordinat → alamat lengkap
+      List<Placemark> placemarks = await placemarkFromCoordinates(
         pos.latitude,
         pos.longitude,
       );
 
-      String finalText = 'Lokasi tidak diketahui';
-      if (placemarks.isNotEmpty) {
-        final p = placemarks.first;
-        final kec = (p.subAdministrativeArea ?? '').trim();
-        final kota = (p.locality ?? p.administrativeArea ?? '').trim();
-        finalText = "📍 ${kec.isNotEmpty ? kec : kota}";
-      }
+      Placemark p = placemarks.first;
+
+      // SUSUN ALAMAT LENGKAP
+      String jalan = (p.thoroughfare ?? '').trim();
+      String desa = (p.subLocality ?? '').trim();
+      String kec = (p.subAdministrativeArea ?? '').trim();
+      String kota = (p.locality ?? '').trim();
+      String provinsi = (p.administrativeArea ?? '').trim();
+
+      // Gabungan detail alamat
+      List<String> detail = [];
+
+      if (jalan.isNotEmpty) detail.add(jalan);
+      if (desa.isNotEmpty) detail.add(desa);
+      if (kec.isNotEmpty) detail.add(kec);
+      if (kota.isNotEmpty) detail.add(kota);
+      if (provinsi.isNotEmpty) detail.add(provinsi);
+
+      String result = detail.join(', ');
 
       setState(() {
-        _locationName = finalText;
+        _locationName = result.isNotEmpty
+            ? "📍 $result"
+            : "Lokasi tidak ditemukan";
         _isGettingLocation = false;
       });
     } catch (e) {
       setState(() {
-        _locationName = 'Gagal mendapatkan lokasi';
+        _locationName = 'Gagal mengambil lokasi';
         _isGettingLocation = false;
       });
     }

@@ -134,8 +134,8 @@ class AboutUsPage extends StatelessWidget {
                           ),
                           SizedBox(height: 6),
                           Text(
-                            'Mata kuliah ini sangat menyenangkan karena memberikan kesempatan untuk berkreasi dan mengimplementasikan ide secara langsung melalui aplikasi nyata. '
-                            'Selain itu, saya merasa lebih memahami bagaimana aplikasi mobile bekerja dan bagaimana desain UI dapat memengaruhi pengalaman pengguna.',
+                            'Mata kuliah ini sangat menyenangkan, membuat saya meerasakan bagaimana menjadi seorang bandung bondowoso yang'
+                            'membangun candi 1 malam namun cintanya tetap tertolak...dari rasa itu membuat saya menjadi kuat sekuat baja.',
                             textAlign: TextAlign.justify,
                             style: TextStyle(height: 1.5),
                           ),
@@ -178,7 +178,7 @@ class AboutUsPage extends StatelessWidget {
                           SizedBox(height: 6),
                           Text(
                             'Semoga mata kuliah ini terus dikembangkan dengan materi yang semakin up-to-date dan mendukung mahasiswa untuk lebih memahami tren teknologi terkini. '
-                            'Terima kasih kepada dosen dan asisten yang telah membimbing dengan sabar selama proses pembelajaran.',
+                            'Terima kasih kepada dosen yang telah membimbing dengan sabar selama proses pembelajaran, lalu aslab yang memberi ide dan teman teman ku yang tidak bisa saya sebutkan satu satu yang menjadi semangat.',
                             textAlign: TextAlign.justify,
                             style: TextStyle(height: 1.5),
                           ),

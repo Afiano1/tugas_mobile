@@ -6,7 +6,7 @@ import 'package:timezone/data/latest.dart' as tzdata;
 
 import '../models/booking_model.dart';
 import '../db/hive_manager.dart';
-import '../main.dart'; // untuk akses flutterLocalNotificationsPlugin
+import '../main.dart'; 
 
 class BookingDetailPage extends StatelessWidget {
   final BookingModel booking;
